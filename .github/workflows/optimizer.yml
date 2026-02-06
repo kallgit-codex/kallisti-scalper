@@ -24,6 +24,7 @@ jobs:
       - name: Run autonomous optimizer + bug fixer
         env:
           OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+          TWELVE_DATA_KEY: ${{ secrets.TWELVE_DATA_KEY }}
         run: bun scripts/optimizer.ts
         
       - name: Commit all changes (code fixes + params + report)
