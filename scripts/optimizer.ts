@@ -361,7 +361,7 @@ Analyze the performance data, market context, and code to:
       'X-Title': 'Kallisti Scalper Optimizer v2'
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4',
+      model: 'anthropic/claude-opus-4.5',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
       max_tokens: 16000
@@ -485,7 +485,7 @@ async function main() {
   console.log(`\n📁 Read ${Object.keys(codeFiles).length} code files`);
 
   // Get AI analysis (bugs + optimizations + market adaptation)
-  console.log('\n🧠 Consulting Claude Sonnet 4 for optimization...\n');
+  console.log('\n🧠 Consulting Claude Opus 4.5 for optimization...\n');
   const result = await getOptimizerResponse(analysis, codeFiles, marketContext);
 
   // Apply bug fixes first
