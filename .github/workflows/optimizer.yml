@@ -1,4 +1,4 @@
-name: Autonomous Optimizer
+name: Autonomous Optimizer + Bug Fixer
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:  # Manual trigger
 
 jobs:
-  optimize:
+  optimize-and-fix:
     runs-on: ubuntu-latest
     
     steps:
@@ -21,15 +21,15 @@ jobs:
       - name: Install dependencies
         run: bun install
         
-      - name: Run autonomous optimizer
+      - name: Run autonomous optimizer + bug fixer
         env:
           OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
         run: bun scripts/optimizer.ts
         
-      - name: Commit changes (config + report)
+      - name: Commit all changes (code fixes + params + report)
         run: |
           git config user.name "Autonomous Optimizer"
           git config user.email "optimizer@kallisti.dev"
-          git add src/config.ts data/optimization-report.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "🤖 Auto-optimization: $(date '+%Y-%m-%d %H:%M UTC')"
+          git add src/ data/optimization-report.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "🤖 Auto-optimization + bug fixes: $(date '+%Y-%m-%d %H:%M UTC')"
           git push
