@@ -1,0 +1,35 @@
+name: Self-Optimizer
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'  # Every 2 hours
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: bun install
+        
+      - name: Run optimizer
+        env:
+          OPENROUTER_KEY: ${{ secrets.OPENROUTER_KEY }}
+        run: bun scripts/optimizer.ts
+        
+      - name: Commit optimization report
+        run: |
+          git config user.name "Optimizer Bot"
+          git config user.email "optimizer@kallisti.dev"
+          git add data/optimization-report.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "🧠 Optimization analysis: $(date)"
+          git push
