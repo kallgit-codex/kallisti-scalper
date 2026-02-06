@@ -1,0 +1,33 @@
+name: Reversal Scalper Bot
+
+on:
+  schedule:
+    - cron: '* * * * *'  # Every 1 minute
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: bun install
+        
+      - name: Run trading bot
+        run: bun src/agent.ts
+        
+      - name: Commit ledger updates
+        run: |
+          git config user.name "Trading Bot"
+          git config user.email "bot@kallisti.dev"
+          git add data/ledger.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "📊 Ledger update: $(date)"
+          git push
