@@ -13,6 +13,7 @@ export interface ReversalSignal {
   detected: boolean;
   reason?: string;
   strength?: number;
+  side?: 'Long' | 'Short';
 }
 
 // Calculate RSI
@@ -35,24 +36,33 @@ function calculateRSI(candles: Candle[], period: number = 14): number {
   return 100 - (100 / (1 + rs));
 }
 
-// Check if at local bottom
-function isLocalBottom(candles: Candle[], lookback: number = 5): boolean {
+// Check if at local bottom or top
+function isLocalExtreme(candles: Candle[], lookback: number = 5, type: 'bottom' | 'top'): boolean {
   if (candles.length < lookback) return false;
   
   const recentCandles = candles.slice(-lookback);
-  const currentLow = recentCandles[recentCandles.length - 1].low;
-  const lowestOfRecent = Math.min(...recentCandles.map(c => c.low));
+  const currentCandle = recentCandles[recentCandles.length - 1];
   
-  return currentLow === lowestOfRecent;
+  if (type === 'bottom') {
+    const lowestOfRecent = Math.min(...recentCandles.map(c => c.low));
+    return currentCandle.low === lowestOfRecent;
+  } else {
+    const highestOfRecent = Math.max(...recentCandles.map(c => c.high));
+    return currentCandle.high === highestOfRecent;
+  }
 }
 
-// Check for green candle
-function isGreenCandle(candle: Candle): boolean {
+// Check for bullish or bearish candle
+function isBullishCandle(candle: Candle): boolean {
   return candle.close > candle.open;
 }
 
+function isBearishCandle(candle: Candle): boolean {
+  return candle.close < candle.open;
+}
+
 // Check for volume spike
-function hasVolumeSpike(candles: Candle[], multiplier: number = 1.5): boolean {
+function hasVolumeSpike(candles: Candle[], multiplier: number = 1.8): boolean {
   if (candles.length < config.strategy.volumeLookback + 1) return false;
   
   const recent = candles.slice(-config.strategy.volumeLookback - 1, -1);
@@ -62,65 +72,73 @@ function hasVolumeSpike(candles: Candle[], multiplier: number = 1.5): boolean {
   return currentVolume >= avgVolume * multiplier;
 }
 
-// Check if above EMA
-function isPriceAboveEMA(candles: Candle[], period: number = 20): boolean {
-  if (candles.length < period) return true;
+// Check trend direction using EMA
+function getTrendDirection(candles: Candle[], period: number = 20): 'up' | 'down' | 'sideways' {
+  if (candles.length < period) return 'sideways';
   
   const recent = candles.slice(-period);
   const ema = recent.reduce((sum, c) => sum + c.close, 0) / period;
   const currentPrice = candles[candles.length - 1].close;
+  const priceChange = (currentPrice - ema) / ema;
   
-  return currentPrice > ema;
+  if (priceChange > 0.001) return 'up';
+  if (priceChange < -0.001) return 'down';
+  return 'sideways';
 }
 
-// MAIN REVERSAL DETECTION
+// MAIN REVERSAL DETECTION - Now supports both longs and shorts
 export function detectReversal(candles: Candle[]): ReversalSignal {
   if (candles.length < 20) {
     return { detected: false, reason: 'Not enough data' };
   }
   
   const currentCandle = candles[candles.length - 1];
-  const previousCandle = candles[candles.length - 2];
-  
-  // 1. At local bottom?
-  const atBottom = isLocalBottom(candles, 5);
-  if (!atBottom) {
-    return { detected: false, reason: 'Not at local bottom' };
-  }
-  
-  // 2. RSI oversold and climbing?
   const rsi = calculateRSI(candles);
   const prevRsi = calculateRSI(candles.slice(0, -1));
+  const trend = getTrendDirection(candles);
   
-  if (rsi >= 35) {
-    return { detected: false, reason: `RSI not oversold (${rsi.toFixed(1)})` };
+  // LONG SIGNAL - RSI oversold and climbing
+  if (rsi <= 40 && rsi > prevRsi && isLocalExtreme(candles, 5, 'bottom')) {
+    if (!isBullishCandle(currentCandle)) {
+      return { detected: false, reason: 'Waiting for green candle for long' };
+    }
+    
+    if (!hasVolumeSpike(candles, config.strategy.volumeMultiplier)) {
+      return { detected: false, reason: 'No volume spike for long' };
+    }
+    
+    const strength = Math.min(1, ((40 - rsi) / 15 + (rsi - prevRsi) / 5) / 2);
+    
+    return {
+      detected: true,
+      side: 'Long',
+      reason: `Long reversal! RSI ${rsi.toFixed(1)} climbing from ${prevRsi.toFixed(1)}`,
+      strength: Math.max(0, Math.min(1, strength))
+    };
   }
   
-  if (rsi <= prevRsi) {
-    return { detected: false, reason: 'RSI not climbing' };
+  // SHORT SIGNAL - RSI overbought and falling
+  if (rsi >= 60 && rsi < prevRsi && isLocalExtreme(candles, 5, 'top')) {
+    if (!isBearishCandle(currentCandle)) {
+      return { detected: false, reason: 'Waiting for red candle for short' };
+    }
+    
+    if (!hasVolumeSpike(candles, config.strategy.volumeMultiplier)) {
+      return { detected: false, reason: 'No volume spike for short' };
+    }
+    
+    const strength = Math.min(1, ((rsi - 60) / 15 + (prevRsi - rsi) / 5) / 2);
+    
+    return {
+      detected: true,
+      side: 'Short',
+      reason: `Short reversal! RSI ${rsi.toFixed(1)} falling from ${prevRsi.toFixed(1)}`,
+      strength: Math.max(0, Math.min(1, strength))
+    };
   }
   
-  // 3. Green candle?
-  if (!isGreenCandle(currentCandle)) {
-    return { detected: false, reason: 'Waiting for green candle' };
-  }
-  
-  // 4. Volume spike?
-  if (!hasVolumeSpike(candles, config.strategy.volumeMultiplier)) {
-    return { detected: false, reason: 'No volume spike' };
-  }
-  
-  // 5. Above EMA?
-  if (!isPriceAboveEMA(candles, 15)) {
-    return { detected: false, reason: 'Below EMA (downtrend)' };
-  }
-  
-  // ALL CONDITIONS MET!
-  const strength = Math.min(1, ((35 - rsi) / 10 + (rsi - prevRsi) / 5) / 2);
-  
-  return {
-    detected: true,
-    reason: `Reversal! RSI ${rsi.toFixed(1)} climbing from ${prevRsi.toFixed(1)}`,
-    strength: Math.max(0, Math.min(1, strength))
+  return { 
+    detected: false, 
+    reason: `No reversal signal (RSI: ${rsi.toFixed(1)}, Trend: ${trend})` 
   };
 }

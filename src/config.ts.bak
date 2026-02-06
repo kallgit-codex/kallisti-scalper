@@ -29,15 +29,15 @@ export const config = {
     // Profit targets - YOUR $20-100 range
     minProfitDollars: 20,      // Minimum $ to take
     maxProfitDollars: 70,      // Force exit at this
-    targetProfitPercent: 0.12, // Increased from 0.10 to 0.12 for better profit
+    targetProfitPercent: 0.10, // 0.15% move on 20x = $30 profit
     
     // Stop losses - TIGHT
-    initialStopPercent: 0.30,  // Reduced from 0.35 to 0.30 for tighter stops
+    initialStopPercent: 0.35,  // Very tight initial stop
     recoveryStopPercent: 0.22, // Wider for recovery
     
     // Time limits - FAST
-    maxTradeSeconds: 240,      // Reduced from 300 to 240 for faster exits
-    quickExitSeconds: 90,      // Reduced from 120 to 90 for quicker breakeven exits
+    maxTradeSeconds: 300,      // 5 minutes max
+    quickExitSeconds: 120,     // Exit at breakeven after 2min if not profitable
     recoveryTimeSeconds: 180,  // 3 minutes to wait for bounce
     
     // Momentum detection (1m only)
@@ -45,7 +45,7 @@ export const config = {
     momentumThreshold: 0.08,   // 0.05% move = momentum
     
     // Volume confirmation
-    volumeMultiplier: 1.8,     // Increased from 1.5 to 1.8 for better volume confirmation
+    volumeMultiplier: 1.5,     // Need 30% above average
     volumeLookback: 20,
     
     // Volatility filter - don't trade if dead
@@ -56,12 +56,11 @@ export const config = {
   risk: {
     initialBalance: 2000,
     positionSizeDollars: 30,   // Risk $30 collateral per trade (20x = $600 position)
-    riskPerTrade: 30,          // Added missing property
     maxDailyLossPercent: 4,    // Stop at -$80/day
     maxDailyLossDollars: 80,
-    maxConsecutiveLosses: 3,   // Reduced from 4 to 3 for better risk control
-    pauseAfterLossesMinutes: 30, // Increased from 20 to 30 for longer pause
-    maxTradesPerHour: 20,      // Reduced from 30 to 20 for better quality trades
+    maxConsecutiveLosses: 4,   // More tolerance since higher frequency
+    pauseAfterLossesMinutes: 20,
+    maxTradesPerHour: 30,      // High frequency - 30/hour = 1 every 2min
     maxOpenRiskDollars: 90,    // Max $90 in open positions
   },
   
