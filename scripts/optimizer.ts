@@ -361,7 +361,7 @@ Analyze the performance data, market context, and code to:
       'X-Title': 'Kallisti Scalper Optimizer v2'
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4-20250514',
+      model: 'anthropic/claude-sonnet-4',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
       max_tokens: 16000
