@@ -1,10 +1,9 @@
-// Kallisti's Reversal Scalper - Buy The Dip Strategy
-// NOW SUPPORTS BOTH LONGS AND SHORTS
+// MOMENTUM RIDER - See it moving, ride it, grab $20, get out.
 
 import { config } from "./config";
 import { log, error } from "./logger";
 import { BinanceClient } from "./exchange/binance";
-import { detectReversal, Candle } from "./strategy/reversal-strategy";
+import { detectMomentum, Candle } from "./strategy/momentum-strategy";
 import {
   createPosition,
   updatePosition,
@@ -23,19 +22,16 @@ function normalizeCandles(rawKlines: any[]): Candle[] {
 }
 
 let lastSignalTime = 0;
-let lastSignalPrice = 0;
-let lastSignalSide: string | null = null;
-const MIN_SIGNAL_INTERVAL = 45000; // 45 seconds between signals
-const MIN_PRICE_CHANGE = 0.0005; // 0.05% price change required for new signal
+const MIN_SIGNAL_INTERVAL = 30000; // 30 sec cooldown between trades
 
 async function main() {
-  log("\n🔄 Kallisti's Reversal Scalper Running");
+  log("\n⚡ MOMENTUM RIDER Running");
   
   const client = new BinanceClient(config.dataSource.baseUrl);
   const ledger = new Ledger();
   await ledger.load();
   
-  // Check if new day
+  // Daily reset
   const now = new Date();
   const lastReset = new Date(ledger.state.lastReset);
   if (now.getUTCDate() !== lastReset.getUTCDate()) {
@@ -50,7 +46,7 @@ async function main() {
   }
   
   try {
-    // Fetch 1m candles
+    // 1-minute candles for speed
     const klines = await client.getKlines(
       config.symbol,
       config.candleInterval,
@@ -59,7 +55,7 @@ async function main() {
     const candles = normalizeCandles(klines.list);
     const currentPrice = candles[candles.length - 1].close;
     
-    // Update open positions
+    // Check open positions first
     const openBefore = [...ledger.openPositions];
     for (const position of openBefore) {
       const update = updatePosition(position, currentPrice);
@@ -71,64 +67,56 @@ async function main() {
           update.reason!
         );
         
-        const pnlEmoji = (closed.pnl || 0) >= 0 ? "✅" : "❌";
-        const timeElapsed = ((closed.exitTime || 0) - closed.entryTime) / 1000;
-        log(`${pnlEmoji} CLOSED (${timeElapsed.toFixed(0)}s): ${position.side} $${closed.pnl?.toFixed(2)} | ${closed.reason}`);
+        const pnl = closed?.pnl || 0;
+        const emoji = pnl >= 0 ? "💰" : "💸";
+        const timeElapsed = ((closed?.exitTime || 0) - (closed?.entryTime || 0)) / 1000;
+        log(`${emoji} CLOSED ${position.side} $${pnl.toFixed(2)} in ${timeElapsed.toFixed(0)}s | ${closed?.reason}`);
       }
     }
     
-    // Display status
+    // Status
     const stats = ledger.stats;
-    log(`💰 $${ledger.state.balance.toFixed(2)} | Daily: $${stats.dailyPnl} (${stats.dailyPnlPercent}%) | ${stats.totalTrades} trades (${stats.winRate}% win)`);
-    log(`📍 Open: ${ledger.openPositions.length} | Hour: ${ledger.state.tradesThisHour}/${config.risk.maxTradesPerHour}`);
+    const posSize = (config.risk.positionSizeDollars * config.futures.leverage).toFixed(0);
+    log(`💎 $${ledger.state.balance.toFixed(2)} | Day: $${stats.dailyPnl} | ${stats.totalTrades} trades (${stats.winRate}% W) | Pos size: $${posSize}`);
+    log(`📍 Open: ${ledger.openPositions.length}/${config.futures.maxPositions} | BTC: $${currentPrice.toFixed(2)}`);
     
-    // Check if can trade
+    // Can we trade?
     const canOpen = ledger.canOpenPosition();
     if (!canOpen.allowed) {
       log(`🛑 ${canOpen.reason}`);
       return;
     }
     
-    // Prevent duplicate signals - check time AND price AND side
-    const currentTime = Date.now();
-    const priceChange = lastSignalPrice > 0 ? Math.abs(currentPrice - lastSignalPrice) / lastSignalPrice : 1;
-    
-    if (currentTime - lastSignalTime < MIN_SIGNAL_INTERVAL) {
-      log(`⏳ Waiting for signal cooldown (${Math.round((MIN_SIGNAL_INTERVAL - (currentTime - lastSignalTime)) / 1000)}s)`);
+    // Signal cooldown
+    if (Date.now() - lastSignalTime < MIN_SIGNAL_INTERVAL) {
+      log(`⏳ Cooldown ${Math.round((MIN_SIGNAL_INTERVAL - (Date.now() - lastSignalTime)) / 1000)}s`);
       return;
     }
     
-    // Look for reversal signal (BOTH LONGS AND SHORTS)
-    const signal = detectReversal(candles);
+    // DETECT MOMENTUM
+    const signal = detectMomentum(candles);
     
     if (!signal.detected) {
       log(`🔍 ${signal.reason}`);
       return;
     }
     
-    // Additional duplicate check - same side and similar price
-    if (signal.side === lastSignalSide && priceChange < MIN_PRICE_CHANGE) {
-      log(`⚠️ Duplicate signal blocked (same side, price only ${(priceChange * 100).toFixed(3)}% different)`);
-      return;
-    }
+    log(`⚡ ${signal.reason}`);
     
-    log(`🎯 REVERSAL DETECTED: ${signal.reason} (strength: ${(signal.strength! * 100).toFixed(0)}%)`);
-    
-    // Create position based on signal side
+    // OPEN POSITION
     const position = createPosition(
-      signal.side!,  // Use signal side (Long or Short)
+      signal.side!,
       currentPrice,
       config.risk.positionSizeDollars
     );
     
     await ledger.openPosition(position);
-    lastSignalTime = currentTime;
-    lastSignalPrice = currentPrice;
-    lastSignalSide = signal.side!;
+    lastSignalTime = Date.now();
     
-    const posSize = (position.collateral * position.leverage).toFixed(0);
-    const sideEmoji = signal.side === 'Long' ? '🚀' : '🔻';
-    log(`${sideEmoji} ${signal.side?.toUpperCase()} $${posSize} (${position.leverage}x) @ $${position.entryPrice.toFixed(2)} | Target: +0.15% ($${(parseFloat(posSize) * 0.0015).toFixed(2)})`);
+    const sideEmoji = signal.side === "Long" ? "🟢" : "🔴";
+    const targetDollars = (config.risk.positionSizeDollars * config.futures.leverage * config.strategy.targetProfitPercent / 100).toFixed(2);
+    const stopDollars = (config.risk.positionSizeDollars * config.futures.leverage * config.strategy.initialStopPercent / 100).toFixed(2);
+    log(`${sideEmoji} ${signal.side} $${posSize} @ $${currentPrice.toFixed(2)} | Target: +$${targetDollars} | Stop: -$${stopDollars}`);
     
   } catch (err) {
     error(`Error: ${err instanceof Error ? err.message : String(err)}`);
