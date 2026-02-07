@@ -1,5 +1,6 @@
-// SNIPER POSITION MANAGER - Get in, get $20, get out
-// No complex recovery. No trailing stops. Just clean exits.
+// SNIPER v2 EXITS - Fast in, fast out
+// $500 × 75x = $37,500 position
+// 0.053% = $20. Stop at 0.053% = $20 loss.
 
 import { config } from "../config";
 
@@ -19,7 +20,6 @@ export interface Position {
   exitTime?: number;
   pnl?: number;
   reason?: string;
-  trailingStop?: number;
 }
 
 export interface PositionUpdate {
@@ -34,16 +34,16 @@ export function createPosition(
   collateral: number
 ): Position {
   const leverage = config.futures.leverage;
-  const stopPercent = config.strategy.initialStopPercent / 100;
-  const targetPercent = config.strategy.targetProfitPercent / 100;
+  const stopPct = config.strategy.initialStopPercent / 100;
+  const targetPct = config.strategy.targetProfitPercent / 100;
   
   const stopLoss = side === "Long"
-    ? entryPrice * (1 - stopPercent)
-    : entryPrice * (1 + stopPercent);
+    ? entryPrice * (1 - stopPct)
+    : entryPrice * (1 + stopPct);
   
   const takeProfit = side === "Long"
-    ? entryPrice * (1 + targetPercent)
-    : entryPrice * (1 - targetPercent);
+    ? entryPrice * (1 + targetPct)
+    : entryPrice * (1 - targetPct);
   
   return {
     id: `snipe-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -65,18 +65,15 @@ export function updatePosition(
   currentPrice: number
 ): PositionUpdate {
   const now = Date.now();
-  const timeElapsed = (now - position.entryTime) / 1000;
-  const positionSize = position.collateral * position.leverage;
+  const elapsed = (now - position.entryTime) / 1000;
+  const posSize = position.collateral * position.leverage;
   
-  let pnlPercent: number;
-  if (position.side === "Long") {
-    pnlPercent = ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
-  } else {
-    pnlPercent = ((position.entryPrice - currentPrice) / position.entryPrice) * 100;
-  }
-  const pnl = (pnlPercent / 100) * positionSize;
+  const pnlPct = position.side === "Long"
+    ? ((currentPrice - position.entryPrice) / position.entryPrice) * 100
+    : ((position.entryPrice - currentPrice) / position.entryPrice) * 100;
+  const pnl = (pnlPct / 100) * posSize;
   
-  // 1. STOP LOSS - instant exit
+  // 1. STOP LOSS - instant
   if (position.side === "Long" && currentPrice <= position.stopLoss) {
     return { shouldClose: true, reason: "stop-loss", exitPrice: currentPrice };
   }
@@ -84,31 +81,31 @@ export function updatePosition(
     return { shouldClose: true, reason: "stop-loss", exitPrice: currentPrice };
   }
   
-  // 2. TAKE PROFIT - we hit our target, grab it
+  // 2. HIT TARGET ($15+)
   if (pnl >= position.minProfitTarget) {
     return { shouldClose: true, reason: "take-profit", exitPrice: currentPrice };
   }
   
-  // 3. MAX PROFIT - don't be greedy
+  // 3. BIG WIN ($60+) - don't get greedy
   if (pnl >= position.maxProfitTarget) {
     return { shouldClose: true, reason: "max-profit", exitPrice: currentPrice };
   }
   
-  // 4. QUICK PROFIT - after 30s, take anything above $10
-  if (timeElapsed >= 30 && pnl >= 10) {
+  // 4. QUICK GRAB - after 30s take $8+
+  if (elapsed >= 30 && pnl >= 8) {
     return { shouldClose: true, reason: "quick-profit", exitPrice: currentPrice };
   }
   
-  // 5. BREAKEVEN EXIT - after 2 min, if we're slightly green, just take it
-  if (timeElapsed >= 120 && pnl >= 2) {
+  // 5. BREAKEVEN - after 90s take $3+
+  if (elapsed >= 90 && pnl >= 3) {
     return { shouldClose: true, reason: "breakeven-exit", exitPrice: currentPrice };
   }
   
-  // 6. TIMEOUT - 5 min max, cut regardless
-  if (timeElapsed >= config.strategy.maxTradeSeconds) {
+  // 6. TIMEOUT - 3 min max, cut it
+  if (elapsed >= config.strategy.maxTradeSeconds) {
     return {
       shouldClose: true,
-      reason: pnl >= 0 ? "timeout-profit" : "timeout-loss",
+      reason: pnl >= 0 ? "timeout-green" : "timeout-red",
       exitPrice: currentPrice
     };
   }
@@ -121,23 +118,17 @@ export function closePosition(
   exitPrice: number,
   reason: string
 ): Position {
-  const positionSize = position.collateral * position.leverage;
-  let pnlPercent: number;
-  
-  if (position.side === "Long") {
-    pnlPercent = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
-  } else {
-    pnlPercent = ((position.entryPrice - exitPrice) / position.entryPrice) * 100;
-  }
-  
-  const pnl = (pnlPercent / 100) * positionSize;
+  const posSize = position.collateral * position.leverage;
+  const pnlPct = position.side === "Long"
+    ? ((exitPrice - position.entryPrice) / position.entryPrice) * 100
+    : ((position.entryPrice - exitPrice) / position.entryPrice) * 100;
   
   return {
     ...position,
     status: "closed",
     exitPrice,
     exitTime: Date.now(),
-    pnl,
+    pnl: (pnlPct / 100) * posSize,
     reason,
   };
 }
