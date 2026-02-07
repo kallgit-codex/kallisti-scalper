@@ -165,8 +165,7 @@ async function startHealthServer() {
 }
 
 async function main() {
-  log("
-🚀 MOMENTUM RIDER - Railway Continuous Mode");
+  log("🚀 MOMENTUM RIDER - Railway Continuous Mode");
   log(`   Scan interval: ${SCAN_INTERVAL_MS / 1000}s`);
   log(`   Mode: ${config.tradingMode}`);
   log(`   Symbol: ${config.symbol}`);
