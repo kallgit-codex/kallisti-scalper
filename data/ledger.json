@@ -1,11 +1,25 @@
 {
-  "balance": 2003.25,
+  "balance": 1503.25,
   "initialBalance": 2003.25,
   "dailyStartBalance": 2003.25,
   "dailyPnl": 0,
   "consecutiveLosses": 0,
-  "positions": [],
+  "positions": [
+    {
+      "id": "snipe-1770460951652-kral",
+      "side": "Long",
+      "entryPrice": 67797.02,
+      "entryTime": 1770460951652,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 67761.0875794,
+      "takeProfit": 67832.95242059999,
+      "minProfitTarget": 15,
+      "maxProfitTarget": 60,
+      "status": "open"
+    }
+  ],
   "lastReset": 1738922400000,
-  "tradesThisHour": 0,
-  "lastHourReset": 1738922400000
+  "tradesThisHour": 1,
+  "lastHourReset": 1770460951651
 }
