@@ -1,11 +1,11 @@
 {
-  "balance": 2000,
-  "initialBalance": 2000,
-  "dailyStartBalance": 2000,
+  "balance": 2003.25,
+  "initialBalance": 2003.25,
+  "dailyStartBalance": 2003.25,
   "dailyPnl": 0,
   "consecutiveLosses": 0,
   "positions": [],
-  "lastReset": 1770458790000,
+  "lastReset": 1738922400000,
   "tradesThisHour": 0,
-  "lastHourReset": 1770458790000
+  "lastHourReset": 1738922400000
 }
