@@ -1,5 +1,5 @@
 {
-  "balance": 1949.7117276254305,
+  "balance": 1449.7117276254305,
   "initialBalance": 2003,
   "dailyStartBalance": 2003,
   "dailyPnl": -53.28827237456949,
@@ -23,10 +23,23 @@
       "fees": 30,
       "grossPnl": -23.288272374569484,
       "reason": "stop-loss"
+    },
+    {
+      "id": "snipe-1770502855932-f5qu",
+      "side": "Long",
+      "entryPrice": 69527.4,
+      "entryTime": 1770502855932,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69490.55047799999,
+      "takeProfit": 69564.24952199998,
+      "minProfitTarget": 15,
+      "maxProfitTarget": 60,
+      "status": "open"
     }
   ],
   "lastReset": 1770502108000,
-  "tradesThisHour": 1,
+  "tradesThisHour": 2,
   "lastHourReset": 1770502108000,
   "note": "Reset Feb 7 2026 - all prior PnL was inflated (no fees). Now tracking NET after 0.08% round-trip fees."
 }
