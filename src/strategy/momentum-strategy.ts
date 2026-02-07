@@ -56,11 +56,11 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
   const totalMove = Math.abs(current.close - prev.open);
   const movePct = (totalMove / prev.open) * 100;
   
-  if (movePct < 0.03) {
+  if (movePct < 0.02) {
     const side = bothBullish ? "Long" : "Short";
     return {
       detected: false,
-      reason: `${side} but weak (${movePct.toFixed(3)}% < 0.03%) @ $${current.close.toFixed(2)}`
+      reason: `${side} but weak (${movePct.toFixed(3)}% < 0.02%) @ $${current.close.toFixed(2)}`
     };
   }
 
@@ -107,4 +107,5 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
     strength,
   };
 }
+
 
