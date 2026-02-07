@@ -6,12 +6,16 @@ import { log, error } from "./logger";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
 const REPO = process.env.GITHUB_REPO || "kallgit-codex/kallisti-scalper";
-const BRANCH = process.env.GITHUB_BRANCH || "railway";
+const BRANCH = process.env.GITHUB_BRANCH || "main";
 const LEDGER_PATH = "data/ledger.json";
 const LOCAL_LEDGER = "./data/ledger.json";
 
 export class GitHubSync {
   private sha: string = "";
+
+  constructor() {
+    log(`📡 GitHub Sync: repo=${REPO} branch=${BRANCH} token=${GITHUB_TOKEN ? "SET (" + GITHUB_TOKEN.slice(0, 6) + "...)" : "MISSING"}`);
+  }
 
   private get headers() {
     return {
@@ -57,7 +61,10 @@ export class GitHubSync {
   }
 
   async pushLedger(): Promise<boolean> {
-    if (!GITHUB_TOKEN) return false;
+    if (!GITHUB_TOKEN) {
+      log("⚠️  No GITHUB_TOKEN, cannot push ledger");
+      return false;
+    }
 
     try {
       const content = await readFile(LOCAL_LEDGER, "utf-8");
@@ -104,6 +111,7 @@ export class GitHubSync {
 
       const result: any = await resp.json();
       this.sha = result.content.sha;
+      log(`📤 Ledger synced to GitHub (sha: ${this.sha.slice(0, 7)})`);
       return true;
     } catch (err) {
       error(`GitHub push error: ${err instanceof Error ? err.message : String(err)}`);
