@@ -1,5 +1,5 @@
 {
-  "balance": 2253.864856141241,
+  "balance": 1753.864856141241,
   "initialBalance": 2003.25,
   "dailyStartBalance": 2003.25,
   "dailyPnl": 250.61485614124095,
@@ -157,9 +157,22 @@
       "exitTime": 1770497734999,
       "pnl": 18.310673060354386,
       "reason": "take-profit"
+    },
+    {
+      "id": "snipe-1770500729730-j7nv",
+      "side": "Short",
+      "entryPrice": 69444.91,
+      "entryTime": 1770500729730,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69481.7158023,
+      "takeProfit": 69408.1041977,
+      "minProfitTarget": 15,
+      "maxProfitTarget": 60,
+      "status": "open"
     }
   ],
   "lastReset": 1738922400000,
-  "tradesThisHour": 6,
-  "lastHourReset": 1770497069158
+  "tradesThisHour": 1,
+  "lastHourReset": 1770500669422
 }
