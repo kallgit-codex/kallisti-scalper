@@ -1,4 +1,5 @@
 // MOMENTUM RIDER - See it moving, ride it, grab $20, get out.
+// All P&L is NET after exchange fees (0.04% taker per side)
 
 import { config } from "./config";
 import { log, error } from "./logger";
@@ -25,7 +26,7 @@ let lastSignalTime = 0;
 const MIN_SIGNAL_INTERVAL = 30000; // 30 sec cooldown between trades
 
 async function main() {
-  log("\n⚡ MOMENTUM RIDER Running");
+  log("MOMENTUM RIDER Running");
   
   const client = new BinanceClient(config.dataSource.baseUrl);
   const ledger = new Ledger();
@@ -36,11 +37,11 @@ async function main() {
   const lastReset = new Date(ledger.state.lastReset);
   if (now.getUTCDate() !== lastReset.getUTCDate()) {
     const stats = ledger.stats;
-    log(`\n📊 DAILY SUMMARY (${lastReset.toLocaleDateString()})`);
-    log(`   Balance: $${ledger.state.balance.toFixed(2)}`);
-    log(`   P&L: $${stats.dailyPnl} (${stats.dailyPnlPercent}%)`);
-    log(`   Trades: ${stats.totalTrades} (${stats.wins}W/${stats.losses}L)`);
-    log(`   Win Rate: ${stats.winRate}%`);
+    log("DAILY SUMMARY (" + lastReset.toLocaleDateString() + ")");
+    log("   Balance: $" + ledger.state.balance.toFixed(2));
+    log("   P&L: $" + stats.dailyPnl + " (" + stats.dailyPnlPercent + "%)");
+    log("   Trades: " + stats.totalTrades + " (" + stats.wins + "W/" + stats.losses + "L)");
+    log("   Win Rate: " + stats.winRate + "%");
     ledger.resetDaily();
     await ledger.save();
   }
@@ -68,28 +69,29 @@ async function main() {
         );
         
         const pnl = closed?.pnl || 0;
+        const fees = (closed as any)?.fees || 0;
+        const grossPnl = (closed as any)?.grossPnl || 0;
         const emoji = pnl >= 0 ? "💰" : "💸";
         const timeElapsed = ((closed?.exitTime || 0) - (closed?.entryTime || 0)) / 1000;
-        log(`${emoji} CLOSED ${position.side} $${pnl.toFixed(2)} in ${timeElapsed.toFixed(0)}s | ${closed?.reason}`);
+        log(emoji + " CLOSED " + position.side + " NET $" + pnl.toFixed(2) + " (gross $" + grossPnl.toFixed(2) + " - $" + fees.toFixed(2) + " fees) in " + timeElapsed.toFixed(0) + "s | " + (closed?.reason || ""));
       }
     }
     
     // Status
     const stats = ledger.stats;
     const posSize = (config.risk.positionSizeDollars * config.futures.leverage).toFixed(0);
-    log(`💎 $${ledger.state.balance.toFixed(2)} | Day: $${stats.dailyPnl} | ${stats.totalTrades} trades (${stats.winRate}% W) | Pos size: $${posSize}`);
-    log(`📍 Open: ${ledger.openPositions.length}/${config.futures.maxPositions} | BTC: $${currentPrice.toFixed(2)}`);
+    log("💎 $" + ledger.state.balance.toFixed(2) + " | Day: $" + stats.dailyPnl + " (net) | " + stats.totalTrades + " trades (" + stats.winRate + "% W) | BTC: $" + currentPrice.toFixed(2));
     
     // Can we trade?
     const canOpen = ledger.canOpenPosition();
     if (!canOpen.allowed) {
-      log(`🛑 ${canOpen.reason}`);
+      log("🛑 " + canOpen.reason);
       return;
     }
     
     // Signal cooldown
     if (Date.now() - lastSignalTime < MIN_SIGNAL_INTERVAL) {
-      log(`⏳ Cooldown ${Math.round((MIN_SIGNAL_INTERVAL - (Date.now() - lastSignalTime)) / 1000)}s`);
+      log("⏳ Cooldown " + Math.round((MIN_SIGNAL_INTERVAL - (Date.now() - lastSignalTime)) / 1000) + "s");
       return;
     }
     
@@ -97,11 +99,11 @@ async function main() {
     const signal = detectMomentum(candles);
     
     if (!signal.detected) {
-      log(`🔍 ${signal.reason}`);
+      log("🔍 " + signal.reason);
       return;
     }
     
-    log(`⚡ ${signal.reason}`);
+    log("⚡ " + signal.reason);
     
     // OPEN POSITION
     const position = createPosition(
@@ -113,17 +115,20 @@ async function main() {
     await ledger.openPosition(position);
     lastSignalTime = Date.now();
     
+    const feePerSide = config.risk.positionSizeDollars * config.futures.leverage * (config.fees.takerFeePercent / 100);
+    const roundTripFee = (feePerSide * 2).toFixed(2);
     const sideEmoji = signal.side === "Long" ? "🟢" : "🔴";
     const targetDollars = (config.risk.positionSizeDollars * config.futures.leverage * config.strategy.targetProfitPercent / 100).toFixed(2);
     const stopDollars = (config.risk.positionSizeDollars * config.futures.leverage * config.strategy.initialStopPercent / 100).toFixed(2);
-    log(`${sideEmoji} ${signal.side} $${posSize} @ $${currentPrice.toFixed(2)} | Target: +$${targetDollars} | Stop: -$${stopDollars}`);
+    log(sideEmoji + " " + signal.side + " $" + posSize + " @ $" + currentPrice.toFixed(2) + " | Target: +$" + targetDollars + " gross | Stop: -$" + stopDollars + " | Fees: $" + roundTripFee);
     
   } catch (err) {
-    error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    error("Error: " + (err instanceof Error ? err.message : String(err)));
   }
 }
 
 main().catch((err) => {
-  error(`Fatal: ${err instanceof Error ? err.message : String(err)}`);
+  error("Fatal: " + (err instanceof Error ? err.message : String(err)));
   process.exit(1);
 });
+
