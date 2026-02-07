@@ -6,7 +6,7 @@ import { log, error } from "./logger";
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
 const REPO = process.env.GITHUB_REPO || "kallgit-codex/kallisti-scalper";
-const BRANCH = process.env.GITHUB_BRANCH || "main";
+const BRANCH = process.env.GITHUB_BRANCH || "data";
 const LEDGER_PATH = "data/ledger.json";
 const LOCAL_LEDGER = "./data/ledger.json";
 
