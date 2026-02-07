@@ -2,7 +2,7 @@ name: Momentum Rider
 
 on:
   schedule:
-    - cron: '*/3 * * * *'  # Every 3 minutes - need speed for momentum
+    - cron: '0 0 30 2 *'  # DISABLED - Railway handles continuous scanning now
   workflow_dispatch:
 
 jobs:
