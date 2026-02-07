@@ -1,5 +1,5 @@
 {
-  "balance": 2119.892294897322,
+  "balance": 1619.8922948973218,
   "initialBalance": 2003.25,
   "dailyStartBalance": 2003.25,
   "dailyPnl": 116.64229489732188,
@@ -21,9 +21,22 @@
       "exitTime": 1770461937824,
       "pnl": 116.64229489732188,
       "reason": "take-profit"
+    },
+    {
+      "id": "snipe-1770486473149-kg63",
+      "side": "Short",
+      "entryPrice": 69238.98,
+      "entryTime": 1770486473149,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69275.6766594,
+      "takeProfit": 69202.2833406,
+      "minProfitTarget": 15,
+      "maxProfitTarget": 60,
+      "status": "open"
     }
   ],
   "lastReset": 1738922400000,
   "tradesThisHour": 1,
-  "lastHourReset": 1770460951651
+  "lastHourReset": 1770486473149
 }
