@@ -1,6 +1,6 @@
-// SNIPER MODE - High conviction, high collateral, tiny targets
-// $500 collateral × 50x = $25,000 position
-// 0.08% move = $20 profit. BTC moves $54 and we cash out.
+// SNIPER MODE v2 - $500 × 75x = $37,500 position
+// 0.053% move = $20 profit = ~$36 BTC price change
+// That happens in SECONDS during momentum
 
 export type TradingMode = "paper" | "live";
 
@@ -9,7 +9,7 @@ const env = process.env;
 export const config = {
   tradingMode: (env.TRADING_MODE as TradingMode) || "paper",
   symbol: env.TARGET_SYMBOL || "BTCUSDT",
-  candleInterval: "1m",          // 1-minute candles - fastest reads
+  candleInterval: "1m",
   candleLimit: 30,
   
   dataSource: {
@@ -18,46 +18,42 @@ export const config = {
   },
   
   futures: {
-    leverage: 50,                 // 50x leverage
-    maxPositions: 1,              // ONE position at a time - full focus
+    leverage: 75,                  // 75x - $36 BTC move = $20
+    maxPositions: 1,               // One shot at a time
   },
   
   strategy: {
-    // SNIPER TARGETS - tiny moves, big positions
-    minProfitDollars: 15,         // Take $15+ profits
-    maxProfitDollars: 50,         // Lock in $50 if we get lucky
-    targetProfitPercent: 0.08,    // 0.08% = $20 on $25k position
+    minProfitDollars: 15,          // Take $15+ 
+    maxProfitDollars: 60,          // Lock in $60 max
+    targetProfitPercent: 0.053,    // 0.053% = $20 on $37.5k
     
-    // TIGHT STOPS - equal risk/reward
-    initialStopPercent: 0.08,     // 0.08% = $20 loss max
-    recoveryStopPercent: 0.06,
+    initialStopPercent: 0.053,     // Equal stop = 1:1 R:R
+    recoveryStopPercent: 0.04,
     
-    // FAST exits - we're in and out
-    maxTradeSeconds: 300,         // 5 min absolute max
-    quickExitSeconds: 60,         // Take profit after 60s if green
-    recoveryTimeSeconds: 120,
+    maxTradeSeconds: 180,          // 3 min max hold
+    quickExitSeconds: 45,          // Take profit after 45s if green
+    recoveryTimeSeconds: 90,
     
-    // Momentum detection on 1m candles
-    momentumCandles: 3,           // Last 3 candles direction
-    momentumThreshold: 0.02,      // 0.02% min move to confirm direction
+    // Momentum - LOOSER to catch more moves
+    consecutiveCandles: 2,         // Only need 2 same-direction candles
+    momentumThreshold: 0.03,       // 0.03% min move to confirm
+    maxChasePercent: 0.25,         // Don't chase if already moved 0.25%
     
-    // Volume confirmation
-    volumeMultiplier: 1.1,        // Just slightly above average
-    volumeLookback: 15,
+    volumeMultiplier: 0.8,         // Volume just needs to not be dead
+    volumeLookback: 10,
     
-    // Volatility - need SOME movement
-    minVolatilityPercent: 0.03,
+    minVolatilityPercent: 0.02,
   },
   
   risk: {
-    initialBalance: 2000,
-    positionSizeDollars: 500,     // $500 per shot
+    initialBalance: 2003,
+    positionSizeDollars: 500,      // $500 collateral per shot
     riskPerTrade: 500,
-    maxDailyLossPercent: 5,       // 5% daily max
-    maxDailyLossDollars: 100,     // $100 max daily loss (5 bad trades)
-    maxConsecutiveLosses: 3,      // 3 losses in a row = pause
-    pauseAfterLossesMinutes: 30,  // 30 min cooldown
-    maxTradesPerHour: 4,          // Quality over quantity
+    maxDailyLossPercent: 5,
+    maxDailyLossDollars: 100,      // 5 bad trades = done
+    maxConsecutiveLosses: 3,       // 3 in a row = 30min break
+    pauseAfterLossesMinutes: 30,
+    maxTradesPerHour: 6,           // Up to 6/hr
     maxOpenRiskDollars: 500,
   },
   
