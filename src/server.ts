@@ -147,13 +147,13 @@ async function startHealthServer() {
           scans: scanCount,
           uptime: process.uptime(),
           mode: config.tradingMode,
-          feesEnabled: true,
+          version: "v3-fee-aware",
           feeRate: config.fees.takerFeePercent + "% per side",
         }), {
           headers: { "Content-Type": "application/json" },
         });
       }
-      return new Response("Kallisti Scalper v2 (fees enabled)", { status: 200 });
+      return new Response("Kallisti Scalper v3 (fee-aware)", { status: 200 });
     },
   });
   log("🌐 Health server on port " + HEALTH_PORT);
@@ -188,7 +188,6 @@ async function main() {
   }
 
   log("⚡ Starting scan loop...");
-  log("DEBUG: About to enter while loop");
 
   const loop = async () => {
     while (isRunning) {
@@ -229,3 +228,4 @@ main().catch((err) => {
   error("Fatal: " + (err instanceof Error ? err.stack || err.message : String(err)));
   process.exit(1);
 });
+
