@@ -1,5 +1,5 @@
 {
-  "balance": 2097.351701539893,
+  "balance": 1597.351701539893,
   "initialBalance": 2000,
   "dailyStartBalance": 2000,
   "dailyPnl": 97.3517015398927,
@@ -61,9 +61,22 @@
       "fees": 30,
       "grossPnl": 54.8676793413924,
       "reason": "quick-profit"
+    },
+    {
+      "id": "snipe-1770506490927-ddi3",
+      "side": "Short",
+      "entryPrice": 68839.99,
+      "entryTime": 1770506490927,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 68943.249985,
+      "takeProfit": 68667.89002500002,
+      "minProfitTarget": 35,
+      "maxProfitTarget": 100,
+      "status": "open"
     }
   ],
   "lastReset": 1770505478649,
-  "tradesThisHour": 3,
+  "tradesThisHour": 4,
   "lastHourReset": 1770505478649
 }
