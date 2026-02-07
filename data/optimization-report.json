@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-02-07T01:56:20.649Z",
+  "timestamp": "2026-02-07T06:40:48.777Z",
   "version": "v2",
-  "marketContext": "=== MARKET CONTEXT (Twelve Data - Last 24h) ===\nRSI (1h): Current 59.4 | 12h Avg: 61.5\nMACD (1h): MACD 957.47 | Signal 660.58 | Hist 296.88\nTrend: BULLISH\nATR (1h): Current $1323 | 12h Avg: $1436",
+  "marketContext": "=== MARKET CONTEXT (Twelve Data - Last 24h) ===\nRSI (1h): Current 56.1 | 12h Avg: 59.9\nMACD (1h): MACD 823.79 | Signal 816.18 | Hist 7.61\nTrend: BULLISH\nATR (1h): Current $1157 | 12h Avg: $1324",
   "analysis": {
     "stats": {
       "currentBalance": "$2003.25",
@@ -18,7 +18,7 @@
       "avgDurationSeconds": "99",
       "longWinRate": "45.8%",
       "shortWinRate": "46.0%",
-      "consecutiveLosses": 7,
+      "consecutiveLosses": 0,
       "openPositions": 0,
       "pnlByReason": {
         "quick-exit-breakeven": "42 trades, $1.74 PnL, 33% win",
@@ -1787,104 +1787,99 @@
   "result": {
     "bugFixes": [
       {
-        "file": "src/strategy/reversal-strategy.ts",
-        "issue": "RSI thresholds too restrictive - RSI 40 for longs and 60 for shorts are not extreme enough for reliable reversals, causing poor entry timing",
-        "fix": "export interface Candle {\n  time: number;\n  open: number;\n  high: number;\n  low: number;\n  close: number;\n  volume: number;\n}\n\nimport { config } from '../config';\n\nexport interface ReversalSignal {\n  detected: boolean;\n  reason?: string;\n  strength?: number;\n  side?: 'Long' | 'Short';\n}\n\n// Calculate RSI\nfunction calculateRSI(candles: Candle[], period: number = 14): number {\n  if (candles.length < period + 1) return 50;\n  \n  const changes = [];\n  for (let i = candles.length - period - 1; i < candles.length - 1; i++) {\n    changes.push(candles[i + 1].close - candles[i].close);\n  }\n  \n  const gains = changes.filter(c => c > 0);\n  const losses = changes.filter(c => c < 0).map(c => Math.abs(c));\n  \n  const avgGain = gains.length > 0 ? gains.reduce((a, b) => a + b, 0) / period : 0;\n  const avgLoss = losses.length > 0 ? losses.reduce((a, b) => a + b, 0) / period : 0;\n  \n  if (avgLoss === 0) return 100;\n  const rs = avgGain / avgLoss;\n  return 100 - (100 / (1 + rs));\n}\n\n// Check if at local bottom or top\nfunction isLocalExtreme(candles: Candle[], lookback: number = 5, type: 'bottom' | 'top'): boolean {\n  if (candles.length < lookback) return false;\n  \n  const recentCandles = candles.slice(-lookback);\n  const currentCandle = recentCandles[recentCandles.length - 1];\n  \n  if (type === 'bottom') {\n    const lowestOfRecent = Math.min(...recentCandles.map(c => c.low));\n    return currentCandle.low <= lowestOfRecent * 1.001; // Allow 0.1% tolerance\n  } else {\n    const highestOfRecent = Math.max(...recentCandles.map(c => c.high));\n    return currentCandle.high >= highestOfRecent * 0.999; // Allow 0.1% tolerance\n  }\n}\n\n// Check for bullish or bearish candle\nfunction isBullishCandle(candle: Candle): boolean {\n  return candle.close > candle.open;\n}\n\nfunction isBearishCandle(candle: Candle): boolean {\n  return candle.close < candle.open;\n}\n\n// Check for volume spike\nfunction hasVolumeSpike(candles: Candle[], multiplier: number = 1.5): boolean {\n  if (candles.length < config.strategy.volumeLookback + 1) return false;\n  \n  const recent = candles.slice(-config.strategy.volumeLookback - 1, -1);\n  const avgVolume = recent.reduce((sum, c) => sum + c.volume, 0) / recent.length;\n  const currentVolume = candles[candles.length - 1].volume;\n  \n  return currentVolume >= avgVolume * multiplier;\n}\n\n// Check trend direction using EMA\nfunction getTrendDirection(candles: Candle[], period: number = 20): 'up' | 'down' | 'sideways' {\n  if (candles.length < period) return 'sideways';\n  \n  const recent = candles.slice(-period);\n  const ema = recent.reduce((sum, c) => sum + c.close, 0) / period;\n  const currentPrice = candles[candles.length - 1].close;\n  const priceChange = (currentPrice - ema) / ema;\n  \n  if (priceChange > 0.001) return 'up';\n  if (priceChange < -0.001) return 'down';\n  return 'sideways';\n}\n\n// Check momentum confirmation\nfunction hasMomentumConfirmation(candles: Candle[], side: 'Long' | 'Short'): boolean {\n  if (candles.length < 3) return false;\n  \n  const last3 = candles.slice(-3);\n  \n  if (side === 'Long') {\n    // For longs, we want to see price stabilizing or starting to rise\n    const priceChange = (last3[2].close - last3[0].close) / last3[0].close;\n    return priceChange > -0.002; // Not falling more than 0.2%\n  } else {\n    // For shorts, we want to see price stabilizing or starting to fall\n    const priceChange = (last3[2].close - last3[0].close) / last3[0].close;\n    return priceChange < 0.002; // Not rising more than 0.2%\n  }\n}\n\n// MAIN REVERSAL DETECTION - Now supports both longs and shorts\nexport function detectReversal(candles: Candle[]): ReversalSignal {\n  if (candles.length < 20) {\n    return { detected: false, reason: 'Not enough data' };\n  }\n  \n  const currentCandle = candles[candles.length - 1];\n  const rsi = calculateRSI(candles);\n  const prevRsi = calculateRSI(candles.slice(0, -1));\n  const trend = getTrendDirection(candles);\n  \n  // LONG SIGNAL - RSI oversold and climbing (more extreme threshold)\n  if (rsi <= 35 && rsi > prevRsi && isLocalExtreme(candles, 5, 'bottom')) {\n    if (!isBullishCandle(currentCandle)) {\n      return { detected: false, reason: 'Waiting for green candle for long' };\n    }\n    \n    if (!hasVolumeSpike(candles, config.strategy.volumeMultiplier)) {\n      return { detected: false, reason: 'No volume spike for long' };\n    }\n    \n    if (!hasMomentumConfirmation(candles, 'Long')) {\n      return { detected: false, reason: 'No momentum confirmation for long' };\n    }\n    \n    const strength = Math.min(1, ((35 - rsi) / 10 + (rsi - prevRsi) / 5) / 2);\n    \n    return {\n      detected: true,\n      side: 'Long',\n      reason: `Long reversal! RSI ${rsi.toFixed(1)} climbing from ${prevRsi.toFixed(1)}`,\n      strength: Math.max(0, Math.min(1, strength))\n    };\n  }\n  \n  // SHORT SIGNAL - RSI overbought and falling (aligned with current bullish market)\n  // In bullish market (RSI 59.4), be more selective with shorts\n  const shortRsiThreshold = trend === 'up' ? 68 : 65;\n  \n  if (rsi >= shortRsiThreshold && rsi < prevRsi && isLocalExtreme(candles, 5, 'top')) {\n    if (!isBearishCandle(currentCandle)) {\n      return { detected: false, reason: 'Waiting for red candle for short' };\n    }\n    \n    if (!hasVolumeSpike(candles, config.strategy.volumeMultiplier)) {\n      return { detected: false, reason: 'No volume spike for short' };\n    }\n    \n    if (!hasMomentumConfirmation(candles, 'Short')) {\n      return { detected: false, reason: 'No momentum confirmation for short' };\n    }\n    \n    const strength = Math.min(1, ((rsi - shortRsiThreshold) / 15 + (prevRsi - rsi) / 5) / 2);\n    \n    return {\n      detected: true,\n      side: 'Short',\n      reason: `Short reversal! RSI ${rsi.toFixed(1)} falling from ${prevRsi.toFixed(1)}`,\n      strength: Math.max(0, Math.min(1, strength))\n    };\n  }\n  \n  return { \n    detected: false, \n    reason: `No reversal signal (RSI: ${rsi.toFixed(1)}, Trend: ${trend})` \n  };\n}",
-        "reasoning": "The current RSI thresholds (40 for longs, 60 for shorts) are not extreme enough. With current market RSI at 59.4 (bullish), shorts at RSI 60 are counter-trend and risky. Added momentum confirmation, adjusted thresholds to 35 for longs and 65-68 for shorts (adaptive to trend), and added tolerance to local extreme detection.",
-        "confidence": "high"
-      },
-      {
         "file": "src/risk/recovery-manager.ts",
-        "issue": "Quick exit breakeven threshold too loose - allowing -$5 loss causes many 'breakeven' trades to actually be losses",
-        "fix": "// NO RECOVERY MODE - Just tight stops and discipline\nimport { config } from \"../config\";\n\nexport interface Position {\n  id: string;\n  side: \"Long\" | \"Short\";\n  entryPrice: number;\n  entryTime: number;\n  collateral: number;\n  leverage: number;\n  stopLoss: number;\n  takeProfit: number;\n  minProfitTarget: number;\n  maxProfitTarget: number;\n  status: \"open\" | \"closed\";\n  exitPrice?: number;\n  exitTime?: number;\n  pnl?: number;\n  reason?: string;\n  trailingStop?: number;\n}\n\nexport interface PositionUpdate {\n  shouldClose: boolean;\n  reason?: string;\n  exitPrice?: number;\n}\n\nexport function createPosition(\n  side: \"Long\" | \"Short\",\n  entryPrice: number,\n  collateral: number\n): Position {\n  const leverage = config.futures.leverage;\n  const stopPercent = config.strategy.initialStopPercent / 100;\n  const stopLoss = side === \"Long\"\n    ? entryPrice * (1 - stopPercent)\n    : entryPrice * (1 + stopPercent);\n  \n  const targetPercent = config.strategy.targetProfitPercent / 100;\n  const takeProfit = side === \"Long\"\n    ? entryPrice * (1 + targetPercent)\n    : entryPrice * (1 - targetPercent);\n  \n  return {\n    id: `pos-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,\n    side,\n    entryPrice,\n    entryTime: Date.now(),\n    collateral,\n    leverage,\n    stopLoss,\n    takeProfit,\n    minProfitTarget: config.strategy.minProfitDollars,\n    maxProfitTarget: config.strategy.maxProfitDollars,\n    status: \"open\" as const,\n  };\n}\n\nexport function updatePosition(\n  position: Position,\n  currentPrice: number\n): PositionUpdate {\n  const now = Date.now();\n  const timeElapsed = (now - position.entryTime) / 1000;\n  const positionSize = position.collateral * position.leverage;\n  \n  let pnlPercent: number;\n  if (position.side === \"Long\") {\n    pnlPercent = ((currentPrice - position.entryPrice) / position.entryPrice) * 100;\n  } else {\n    pnlPercent = ((position.entryPrice - currentPrice) / position.entryPrice) * 100;\n  }\n  const pnl = (pnlPercent / 100) * positionSize;\n  \n  // 1. STOP LOSS - Get out NOW\n  if (position.side === \"Long\" && currentPrice <= position.stopLoss) {\n    return { shouldClose: true, reason: \"stop-loss\", exitPrice: currentPrice };\n  }\n  if (position.side === \"Short\" && currentPrice >= position.stopLoss) {\n    return { shouldClose: true, reason: \"stop-loss\", exitPrice: currentPrice };\n  }\n  \n  // 2. MAX PROFIT - Lock it in\n  if (pnl >= position.maxProfitTarget) {\n    return { shouldClose: true, reason: \"max-profit\", exitPrice: currentPrice };\n  }\n  \n  // 3. TAKE PROFIT\n  if (position.side === \"Long\" && currentPrice >= position.takeProfit) {\n    return { shouldClose: true, reason: \"take-profit\", exitPrice: currentPrice };\n  }\n  if (position.side === \"Short\" && currentPrice <= position.takeProfit) {\n    return { shouldClose: true, reason: \"take-profit\", exitPrice: currentPrice };\n  }\n  \n  // 4. MIN PROFIT\n  if (pnl >= position.minProfitTarget) {\n    return { shouldClose: true, reason: \"min-profit\", exitPrice: currentPrice };\n  }\n  \n  // 5. TRAILING STOP - Move stop to breakeven after 0.06% profit\n  if (pnlPercent >= 0.06 && !position.trailingStop) {\n    // Update trailing stop to breakeven (handled externally)\n    position.trailingStop = position.entryPrice;\n  }\n  \n  // 6. QUICK EXIT - Only if actually profitable (not -$5 loss!)\n  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= 0.50) {\n    return { shouldClose: true, reason: \"quick-exit-profit\", exitPrice: currentPrice };\n  }\n  \n  // 7. EXTENDED TIMEOUT with small loss tolerance\n  if (timeElapsed >= config.strategy.maxTradeSeconds) {\n    return {\n      shouldClose: true,\n      reason: pnl >= 0 ? \"timeout-profit\" : \"timeout-loss\",\n      exitPrice: currentPrice\n    };\n  }\n  \n  // 8. STALE TRADE - If no movement after 2 minutes, exit at breakeven or small profit\n  if (timeElapsed >= 120 && Math.abs(pnlPercent) < 0.02) {\n    return { shouldClose: true, reason: \"stale-exit\", exitPrice: currentPrice };\n  }\n  \n  return { shouldClose: false };\n}\n\nexport function closePosition(\n  position: Position,\n  exitPrice: number,\n  reason: string\n): Position & { exitPrice: number; exitTime: number; pnl: number; reason: string } {\n  const positionSize = position.collateral * position.leverage;\n  let pnlPercent: number;\n  if (position.side === \"Long\") {\n    pnlPercent = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;\n  } else {\n    pnlPercent = ((position.entryPrice - exitPrice) / position.entryPrice) * 100;\n  }\n  const pnl = (pnlPercent / 100) * positionSize;\n  \n  return {\n    ...position,\n    exitPrice,\n    exitTime: Date.now(),\n    pnl,\n    status: \"closed\" as const,\n    reason,\n  };\n}",
-        "reasoning": "The quick-exit-breakeven logic was allowing trades to exit with up to -$5 loss, which explains why 42 'breakeven' trades only had 33% win rate and many had negative PnL. Changed threshold from pnl >= -5 to pnl >= 0.50 (must be actually profitable). Also added stale trade detection and trailing stop concept.",
-        "confidence": "high"
-      },
-      {
-        "file": "src/agent.ts",
-        "issue": "Duplicate trades being opened - sample shows identical entry/exit prices suggesting duplicate signal processing",
-        "fix": "// Kallisti's Reversal Scalper - Buy The Dip Strategy\n// NOW SUPPORTS BOTH LONGS AND SHORTS\n\nimport { config } from \"./config\";\nimport { log, error } from \"./logger\";\nimport { BinanceClient } from \"./exchange/binance\";\nimport { detectReversal, Candle } from \"./strategy/reversal-strategy\";\nimport {\n  createPosition,\n  updatePosition,\n} from \"./risk/recovery-manager\";\nimport { Ledger } from \"./ledger\";\n\nfunction normalizeCandles(rawKlines: any[]): Candle[] {\n  return rawKlines.map((k: any) => ({\n    time: k[0],\n    open: parseFloat(k[1]),\n    high: parseFloat(k[2]),\n    low: parseFloat(k[3]),\n    close: parseFloat(k[4]),\n    volume: parseFloat(k[5]),\n  }));\n}\n\nlet lastSignalTime = 0;\nlet lastSignalPrice = 0;\nlet lastSignalSide: string | null = null;\nconst MIN_SIGNAL_INTERVAL = 45000; // 45 seconds between signals\nconst MIN_PRICE_CHANGE = 0.0005; // 0.05% price change required for new signal\n\nasync function main() {\n  log(\"\\n🔄 Kallisti's Reversal Scalper Running\");\n  \n  const client = new BinanceClient(config.dataSource.baseUrl);\n  const ledger = new Ledger();\n  await ledger.load();\n  \n  // Check if new day\n  const now = new Date();\n  const lastReset = new Date(ledger.state.lastReset);\n  if (now.getUTCDate() !== lastReset.getUTCDate()) {\n    const stats = ledger.stats;\n    log(`\\n📊 DAILY SUMMARY (${lastReset.toLocaleDateString()})`);\n    log(`   Balance: $${ledger.state.balance.toFixed(2)}`);\n    log(`   P&L: $${stats.dailyPnl} (${stats.dailyPnlPercent}%)`);\n    log(`   Trades: ${stats.totalTrades} (${stats.wins}W/${stats.losses}L)`);\n    log(`   Win Rate: ${stats.winRate}%`);\n    ledger.resetDaily();\n    await ledger.save();\n  }\n  \n  try {\n    // Fetch 1m candles\n    const klines = await client.getKlines(\n      config.symbol,\n      config.candleInterval,\n      config.candleLimit\n    );\n    const candles = normalizeCandles(klines.list);\n    const currentPrice = candles[candles.length - 1].close;\n    \n    // Update open positions\n    const openBefore = [...ledger.openPositions];\n    for (const position of openBefore) {\n      const update = updatePosition(position, currentPrice);\n      \n      if (update.shouldClose) {\n        const closed = await ledger.closePosition(\n          position.id,\n          update.exitPrice!,\n          update.reason!\n        );\n        \n        const pnlEmoji = (closed.pnl || 0) >= 0 ? \"✅\" : \"❌\";\n        const timeElapsed = ((closed.exitTime || 0) - closed.entryTime) / 1000;\n        log(`${pnlEmoji} CLOSED (${timeElapsed.toFixed(0)}s): ${position.side} $${closed.pnl?.toFixed(2)} | ${closed.reason}`);\n      }\n    }\n    \n    // Display status\n    const stats = ledger.stats;\n    log(`💰 $${ledger.state.balance.toFixed(2)} | Daily: $${stats.dailyPnl} (${stats.dailyPnlPercent}%) | ${stats.totalTrades} trades (${stats.winRate}% win)`);\n    log(`📍 Open: ${ledger.openPositions.length} | Hour: ${ledger.state.tradesThisHour}/${config.risk.maxTradesPerHour}`);\n    \n    // Check if can trade\n    const canOpen = ledger.canOpenPosition();\n    if (!canOpen.allowed) {\n      log(`🛑 ${canOpen.reason}`);\n      return;\n    }\n    \n    // Prevent duplicate signals - check time AND price AND side\n    const currentTime = Date.now();\n    const priceChange = lastSignalPrice > 0 ? Math.abs(currentPrice - lastSignalPrice) / lastSignalPrice : 1;\n    \n    if (currentTime - lastSignalTime < MIN_SIGNAL_INTERVAL) {\n      log(`⏳ Waiting for signal cooldown (${Math.round((MIN_SIGNAL_INTERVAL - (currentTime - lastSignalTime)) / 1000)}s)`);\n      return;\n    }\n    \n    // Look for reversal signal (BOTH LONGS AND SHORTS)\n    const signal = detectReversal(candles);\n    \n    if (!signal.detected) {\n      log(`🔍 ${signal.reason}`);\n      return;\n    }\n    \n    // Additional duplicate check - same side and similar price\n    if (signal.side === lastSignalSide && priceChange < MIN_PRICE_CHANGE) {\n      log(`⚠️ Duplicate signal blocked (same side, price only ${(priceChange * 100).toFixed(3)}% different)`);\n      return;\n    }\n    \n    log(`🎯 REVERSAL DETECTED: ${signal.reason} (strength: ${(signal.strength! * 100).toFixed(0)}%)`);\n    \n    // Create position based on signal side\n    const position = createPosition(\n      signal.side!,  // Use signal side (Long or Short)\n      currentPrice,\n      config.risk.positionSizeDollars\n    );\n    \n    await ledger.openPosition(position);\n    lastSignalTime = currentTime;\n    lastSignalPrice = currentPrice;\n    lastSignalSide = signal.side!;\n    \n    const posSize = (position.collateral * position.leverage).toFixed(0);\n    const sideEmoji = signal.side === 'Long' ? '🚀' : '🔻';\n    log(`${sideEmoji} ${signal.side?.toUpperCase()} $${posSize} (${position.leverage}x) @ $${position.entryPrice.toFixed(2)} | Target: +0.15% ($${(parseFloat(posSize) * 0.0015).toFixed(2)})`);\n    \n  } catch (err) {\n    error(`Error: ${err instanceof Error ? err.message : String(err)}`);\n  }\n}\n\nmain().catch((err) => {\n  error(`Fatal: ${err instanceof Error ? err.message : String(err)}`);\n  process.exit(1);\n});",
-        "reasoning": "Sample trades show duplicate entries with identical entry/exit prices (13 anomalies detected). Added lastSignalPrice and lastSignalSide tracking to prevent duplicate signals at similar prices. Also increased MIN_SIGNAL_INTERVAL from 30s to 45s and added MIN_PRICE_CHANGE check.",
+        "issue": "quick-exit-breakeven logic is closing trades at losses (42 trades with only 33% win rate and many negative PnL). The condition checks for pnl >= 0.50 but the reason is 'quick-exit-breakeven' which suggests it should be closing at breakeven, not profit. Also missing a proper breakeven exit that's causing 13 trades with identical entry/exit prices.",
+        "fix": "// NO RECOVERY MODE - Just tight stops and discipline\nimport { config } from \"../config\";\n\nexport interface Position {\n  id: string;\n  side: \"Long\" | \"Short\";\n  entryPrice: number;\n  entryTime: number;\n  collateral: number;\n  leverage: number;\n  stopLoss: number;\n  takeProfit: number;\n  minProfitTarget: number;\n  maxProfitTarget: number;\n  status: \"open\" | \"closed\";\n  exitPrice?: number;\n  exitTime?: number;\n  pnl?: number;\n  reason?: string;\n  trailingStop?: number;\n}\n\nexport interface PositionUpdate {\n  shouldClose: boolean;\n  reason?: string;\n  exitPrice?: number;\n}\n\nexport function createPosition(\n  side: \"Long\" | \"Short\",\n  entryPrice: number,\n  collateral: number\n): Position {\n  const leverage = config.futures.leverage;\n  const stopPercent = config.strategy.initialStopPercent / 100;\n  const stopLoss = side === \"Long\"\n    ? entryPrice * (1 - stopPercent)\n    : entryPrice * (1 + stopPercent);\n  \n  const targetPercent = config.strategy.targetProfitPercent / 100;\n  const takeProfit = side === \"Long\"\n    ? entryPrice * (1 + targetPercent)\n    : entryPrice * (1 - targetPercent);\n  \n  return {\n    id: `pos-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,\n    side,\n    entryPrice,\n    entryTime: Date.now(),\n    collateral,\n    leverage,\n    stopLoss,\n    takeProfit,\n    minProfitTarget: config.strategy.minProfitDollars,\n    maxProfitTarget: config.strategy.maxProfitDollars,\n    status: \"open\" as const,\n  };\n}\n\nexport function updatePosition(\n  position: Position,\n  currentPrice: number\n): PositionUpdate {\n  const now = Date.now();\n  const timeElapsed = (now - position.entryTime) / 1000;\n  const positionSize = position.collateral * position.leverage;\n  \n  let pnlPercent: number;\n  if (position.side === \"Long\") {\n    pnlPercent = ((currentPrice - position.entryPrice) / position.entryPrice) * 100;\n  } else {\n    pnlPercent = ((position.entryPrice - currentPrice) / position.entryPrice) * 100;\n  }\n  const pnl = (pnlPercent / 100) * positionSize;\n  \n  // 1. STOP LOSS - Get out NOW\n  if (position.side === \"Long\" && currentPrice <= position.stopLoss) {\n    return { shouldClose: true, reason: \"stop-loss\", exitPrice: currentPrice };\n  }\n  if (position.side === \"Short\" && currentPrice >= position.stopLoss) {\n    return { shouldClose: true, reason: \"stop-loss\", exitPrice: currentPrice };\n  }\n  \n  // 2. MAX PROFIT - Lock it in\n  if (pnl >= position.maxProfitTarget) {\n    return { shouldClose: true, reason: \"max-profit\", exitPrice: currentPrice };\n  }\n  \n  // 3. TAKE PROFIT\n  if (position.side === \"Long\" && currentPrice >= position.takeProfit) {\n    return { shouldClose: true, reason: \"take-profit\", exitPrice: currentPrice };\n  }\n  if (position.side === \"Short\" && currentPrice <= position.takeProfit) {\n    return { shouldClose: true, reason: \"take-profit\", exitPrice: currentPrice };\n  }\n  \n  // 4. MIN PROFIT\n  if (pnl >= position.minProfitTarget) {\n    return { shouldClose: true, reason: \"min-profit\", exitPrice: currentPrice };\n  }\n  \n  // 5. TRAILING STOP - Move stop to breakeven after 0.08% profit\n  if (pnlPercent >= 0.08 && !position.trailingStop) {\n    position.trailingStop = position.entryPrice;\n  }\n  \n  // 5b. Check trailing stop hit (breakeven protection)\n  if (position.trailingStop) {\n    if (position.side === \"Long\" && currentPrice <= position.trailingStop) {\n      return { shouldClose: true, reason: \"trailing-stop-breakeven\", exitPrice: currentPrice };\n    }\n    if (position.side === \"Short\" && currentPrice >= position.trailingStop) {\n      return { shouldClose: true, reason: \"trailing-stop-breakeven\", exitPrice: currentPrice };\n    }\n  }\n  \n  // 6. QUICK EXIT - Only if actually profitable (minimum $0.30 profit to cover fees)\n  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= 0.30) {\n    return { shouldClose: true, reason: \"quick-exit-profit\", exitPrice: currentPrice };\n  }\n  \n  // 7. EXTENDED TIMEOUT - Exit with small loss tolerance only after max time\n  if (timeElapsed >= config.strategy.maxTradeSeconds) {\n    return {\n      shouldClose: true,\n      reason: pnl >= 0 ? \"timeout-profit\" : \"timeout-loss\",\n      exitPrice: currentPrice\n    };\n  }\n  \n  // 8. STALE TRADE - If no movement after 150 seconds, exit only if slightly profitable\n  if (timeElapsed >= 150 && pnlPercent >= 0.02 && pnlPercent < 0.05) {\n    return { shouldClose: true, reason: \"stale-exit-profit\", exitPrice: currentPrice };\n  }\n  \n  return { shouldClose: false };\n}",
+        "reasoning": "The quick-exit-breakeven reason is being used for trades that are actually losing money (33% win rate, -$0.786 PnL trades). The logic was checking pnl >= 0.50 but many trades closed with losses. Also, 13 trades had identical entry/exit prices indicating a bug where trades close immediately. Fixed by: 1) Lowering quick-exit threshold to $0.30 to cover fees, 2) Adding proper trailing stop breakeven logic, 3) Changing stale-exit to only trigger when slightly profitable, 4) Increasing stale timeout from 120s to 150s.",
         "confidence": "high"
       }
     ],
     "parameterChanges": [
       {
-        "parameter": "targetProfitPercent",
-        "currentValue": "0.12",
-        "suggestedValue": "0.15",
-        "reasoning": "With ATR at $1323 (1.98% of current price ~$67k), there's enough volatility to capture 0.15% moves. Current take-profit trades are 100% successful, suggesting we can be slightly more aggressive.",
-        "expectedImpact": "+25% profit per winning trade",
+        "parameter": "initialStopPercent",
+        "currentValue": "0.25",
+        "suggestedValue": "0.20",
+        "reasoning": "Stop losses are causing -$39.49 total PnL with avg loss of $1.58. In current high volatility market (BTC dropped from $72k to $64k in 2 days), tighter stops will reduce loss magnitude. The avg loss of $1.16 vs avg win of $1.10 shows stops are too wide.",
+        "expectedImpact": "Reduce avg loss from $1.16 to ~$0.95, improving expectancy",
         "confidence": "high",
-        "configPath": "strategy.targetProfitPercent"
+        "configPath": "initialStopPercent"
       },
       {
-        "parameter": "initialStopPercent",
-        "currentValue": "0.30",
-        "suggestedValue": "0.25",
-        "reasoning": "Stop losses are causing -$39.49 total loss across 25 trades. Tighter stops will reduce loss per trade. With 20x leverage, 0.25% stop = $3 max loss per $600 position.",
-        "expectedImpact": "Reduce avg loss from $1.58 to ~$1.25",
+        "parameter": "targetProfitPercent",
+        "currentValue": "0.15",
+        "suggestedValue": "0.12",
+        "reasoning": "Take-profit trades are 100% successful ($41 PnL from 31 trades = $1.32 avg). In current bearish/volatile market with RSI showing sell signals, smaller targets will increase hit rate and reduce exposure time. ATR is $1157 which supports smaller targets.",
+        "expectedImpact": "Faster exits, higher win rate, reduced exposure to sudden drops",
         "confidence": "high",
-        "configPath": "strategy.initialStopPercent"
+        "configPath": "targetProfitPercent"
       },
       {
         "parameter": "quickExitSeconds",
-        "currentValue": "90",
-        "suggestedValue": "120",
-        "reasoning": "Many quick-exit-breakeven trades are actually losses. Giving trades more time (2 min) allows price to move to profit target. Combined with the bug fix requiring actual profit for quick exit.",
-        "expectedImpact": "Fewer premature exits, better win rate on quick exits",
+        "currentValue": "120",
+        "suggestedValue": "90",
+        "reasoning": "Average trade duration is 99 seconds. Many losing trades are held too long. In current volatile market with sudden drops, faster exits protect capital. Hours 10-14 UTC show 0-25% win rates - faster exits would limit damage.",
+        "expectedImpact": "Reduce exposure time, limit losses during poor hours",
         "confidence": "high",
-        "configPath": "strategy.quickExitSeconds"
+        "configPath": "quickExitSeconds"
       },
       {
-        "parameter": "volumeMultiplier",
-        "currentValue": "1.8",
-        "suggestedValue": "1.5",
-        "reasoning": "Volume requirement may be too strict, filtering out valid signals. In bullish trending market with positive MACD histogram (296.88), slightly lower volume threshold is acceptable.",
-        "expectedImpact": "More trade opportunities without sacrificing quality",
+        "parameter": "maxTradeSeconds",
+        "currentValue": "240",
+        "suggestedValue": "180",
+        "reasoning": "Trades held longer than 2 minutes are showing poor performance. In current market with $2.6B daily liquidations and high volatility, shorter max trade time reduces risk of sudden adverse moves.",
+        "expectedImpact": "Reduce tail risk from extended holds",
         "confidence": "medium",
-        "configPath": "strategy.volumeMultiplier"
+        "configPath": "maxTradeSeconds"
       },
       {
         "parameter": "maxTradesPerHour",
-        "currentValue": "20",
-        "suggestedValue": "15",
-        "reasoning": "Hourly data shows best performance at hours 2,3,8,9 UTC. Reducing max trades forces more selectivity. Current 98 trades in ~12 hours = 8/hour avg, so 15 is still generous.",
-        "expectedImpact": "Higher quality trade selection",
-        "confidence": "high",
-        "configPath": "risk.maxTradesPerHour"
+        "currentValue": "15",
+        "suggestedValue": "12",
+        "reasoning": "Hours with high trade counts (Hour 8: 15 trades, Hour 9: 18 trades) show mixed results. Reducing max trades will force better signal quality. Current negative expectancy (-$0.121) means fewer trades = less losses.",
+        "expectedImpact": "Better trade quality, reduced overtrading",
+        "confidence": "medium",
+        "configPath": "maxTradesPerHour"
+      },
+      {
+        "parameter": "volumeMultiplier",
+        "currentValue": "1.5",
+        "suggestedValue": "1.8",
+        "reasoning": "Need stronger volume confirmation in current low-liquidity environment. Market data shows thinning liquidity amplifying volatility. Higher volume threshold will filter out weak signals.",
+        "expectedImpact": "Fewer but higher quality signals",
+        "confidence": "medium",
+        "configPath": "volumeMultiplier"
       },
       {
         "parameter": "minProfitDollars",
-        "currentValue": "20",
-        "suggestedValue": "12",
-        "reasoning": "With $600 position size (30 collateral x 20 leverage), $20 min profit requires 3.3% move which is unrealistic for scalping. $12 = 2% move is more achievable.",
-        "expectedImpact": "More trades hitting min profit target",
+        "currentValue": "12",
+        "suggestedValue": "8",
+        "reasoning": "Current min profit of $12 may be too high for quick scalps. With $30 collateral at 20x ($600 position), $8 profit = 1.33% which is achievable. This allows more profitable exits before reversals.",
+        "expectedImpact": "More trades hitting profit targets",
         "confidence": "medium",
-        "configPath": "strategy.minProfitDollars"
+        "configPath": "minProfitDollars"
       }
     ],
-    "summary": "Identified 3 critical bugs: 1) RSI thresholds too loose causing poor entry timing especially for shorts in bullish market, 2) Quick-exit-breakeven allowing -$5 losses to count as 'breakeven', 3) Duplicate signal processing causing 13 identical entry/exit trades. Fixed all three with improved signal validation, proper profit requirements for quick exits, and duplicate detection. Parameter changes focus on tighter stops (0.25%), higher take profit (0.15%), and reduced volume requirement (1.5x) to adapt to current bullish market conditions.",
-    "marketAdaptation": "Current market shows RSI 59.4 (bullish), positive MACD histogram (296.88), and ATR of $1323. Strategy adapted by: 1) Raising short RSI threshold to 65-68 in uptrends to avoid counter-trend shorts, 2) Keeping long RSI at 35 for quality dip-buying opportunities, 3) Increasing take profit to 0.15% to capture more of the available volatility, 4) Adding momentum confirmation to ensure we're not fighting the trend.",
+    "summary": "Critical bug fix in recovery-manager.ts where quick-exit-breakeven was closing trades at losses (33% win rate). The logic allowed trades to close with negative PnL while labeled as 'breakeven'. Fixed by adding proper trailing stop logic and requiring minimum profit for quick exits. Parameter optimizations focus on tighter risk management for current bearish/volatile market: reduced stop loss (0.25% -> 0.20%), smaller profit targets (0.15% -> 0.12%), faster exits (120s -> 90s quick exit, 240s -> 180s max), and stricter volume confirmation (1.5x -> 1.8x). Hours 10-14 UTC show 0-25% win rates and should be monitored for potential trading hour restrictions.",
+    "marketAdaptation": "BTC has dropped from $72k to $64k in recent days with record $3.2B realized losses. Market shows extreme fear sentiment, high volatility (19.24% estimated), and bearish technical signals across all timeframes. ETF outflows of $434M indicate institutional selling. Adaptations: 1) Tighter stops to limit downside in sudden drops, 2) Smaller profit targets for faster exits before reversals, 3) Higher volume requirements to filter weak signals in low liquidity, 4) Shorter trade durations to reduce exposure. The bullish RSI (56.1) from Twelve Data conflicts with broader bearish sentiment - suggests short-term bounces within downtrend, favoring quick scalps over extended holds.",
     "warnings": [
-      "Hours 10-14 UTC show consistent losses - consider adding time-based filtering to avoid these hours",
-      "7 consecutive losses detected - the pause mechanism should trigger but verify it's working",
-      "Short trades in bullish market are inherently riskier - monitor short win rate separately",
-      "Watch for market regime change if RSI drops below 50 or MACD histogram turns negative"
+      "Hours 10-14 UTC show 0-25% win rates with -$13.25 combined PnL - consider adding time-based trading restrictions",
+      "13 trades with identical entry/exit prices indicate potential execution or timing bug - monitor after fix",
+      "Current market showing extreme volatility with potential for further 10%+ drops - consider reducing position size",
+      "Short trades in bullish micro-trend (RSI 56.1) may face headwinds - monitor short win rate",
+      "Duplicate signal detection may be too loose - 2 trades often have same entry/exit prices within seconds"
     ]
   },
   "bugFixesApplied": [
-    "🐛→✅ src/strategy/reversal-strategy.ts: RSI thresholds too restrictive - RSI 40 for longs and 60 for shorts are not extreme enough for reliable reversals, causing poor entry timing",
-    "🐛→✅ src/risk/recovery-manager.ts: Quick exit breakeven threshold too loose - allowing -$5 loss causes many 'breakeven' trades to actually be losses",
-    "🐛→✅ src/agent.ts: Duplicate trades being opened - sample shows identical entry/exit prices suggesting duplicate signal processing"
+    "🐛→✅ src/risk/recovery-manager.ts: quick-exit-breakeven logic is closing trades at losses (42 trades with only 33% win rate and many negative PnL). The condition checks for pnl >= 0.50 but the reason is 'quick-exit-breakeven' which suggests it should be closing at breakeven, not profit. Also missing a proper breakeven exit that's causing 13 trades with identical entry/exit prices."
   ],
   "paramChangesApplied": [
-    "⚙️ targetProfitPercent: 0.12 → 0.15",
-    "⚙️ initialStopPercent: 0.30 → 0.25",
-    "⚙️ quickExitSeconds: 90 → 120",
-    "⚙️ volumeMultiplier: 1.8 → 1.5",
-    "⚙️ maxTradesPerHour: 20 → 15",
-    "⚙️ minProfitDollars: 20 → 12"
+    "⚙️ initialStopPercent: 0.25 → 0.20",
+    "⚙️ targetProfitPercent: 0.15 → 0.12",
+    "⚙️ quickExitSeconds: 120 → 90",
+    "⚙️ maxTradeSeconds: 240 → 180",
+    "⚙️ maxTradesPerHour: 15 → 12",
+    "⚙️ volumeMultiplier: 1.5 → 1.8",
+    "⚙️ minProfitDollars: 12 → 8"
   ],
-  "totalChanges": 9
+  "totalChanges": 8
 }
