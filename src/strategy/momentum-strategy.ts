@@ -65,16 +65,16 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
   }
 
   // === RULE 4: NOT CHASING ===
-  // Check 5-candle move - if already ran 0.25%+, we're late
+  // Check 5-candle move - if already ran 0.35%+, we're late
   const move5 = candles.length >= 5 
     ? Math.abs(current.close - candles[candles.length - 5].open) / candles[candles.length - 5].open * 100 
     : movePct;
   
-  if (move5 > 0.25) {
+  if (move5 > 0.35) {
     const side = bothBullish ? "Long" : "Short";
     return {
       detected: false,
-      reason: `${side} but late (5m move ${move5.toFixed(3)}% > 0.25%) @ $${current.close.toFixed(2)}`
+      reason: `${side} but late (5m move ${move5.toFixed(3)}% > 0.35%) @ $${current.close.toFixed(2)}`
     };
   }
 
@@ -107,3 +107,4 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
     strength,
   };
 }
+
