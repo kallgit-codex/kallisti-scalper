@@ -1,11 +1,25 @@
 {
-  "balance": 2000,
+  "balance": 1500,
   "initialBalance": 2000,
   "dailyStartBalance": 2000,
   "dailyPnl": 0,
   "consecutiveLosses": 0,
-  "positions": [],
+  "positions": [
+    {
+      "id": "snipe-1770505349017-sadj",
+      "side": "Short",
+      "entryPrice": 69338,
+      "entryTime": 1770505349017,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69442.007,
+      "takeProfit": 69164.655,
+      "minProfitTarget": 35,
+      "maxProfitTarget": 100,
+      "status": "open"
+    }
+  ],
   "lastReset": 1770505324325,
-  "tradesThisHour": 0,
+  "tradesThisHour": 1,
   "lastHourReset": 1770505324325
 }
