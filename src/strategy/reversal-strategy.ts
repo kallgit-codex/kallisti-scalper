@@ -132,7 +132,7 @@ export function detectReversal(candles: Candle[]): ReversalSignal {
   // --- SIGNAL THRESHOLD: 4+ points to trade ---
   const THRESHOLD = 3;
   
-  if (longScore >= THRESHOLD && longScore > shortScore) {
+  if (longScore >= THRESHOLD && longScore >= shortScore) {
     const strength = Math.min(1, longScore / 8);
     return {
       detected: true,
@@ -162,4 +162,5 @@ export function detectReversal(candles: Candle[]): ReversalSignal {
     reason: `No signal (best: ${bestSide} score ${bestScore}/${THRESHOLD} - ${bestReasons.join(", ") || "no factors"}) RSI: ${rsi.toFixed(1)} Trend: ${trend}`,
   };
 }
+
 
