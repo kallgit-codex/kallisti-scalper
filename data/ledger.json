@@ -1,12 +1,26 @@
 {
-  "balance": 2003,
+  "balance": 1503,
   "initialBalance": 2003,
   "dailyStartBalance": 2003,
   "dailyPnl": 0,
   "consecutiveLosses": 0,
-  "positions": [],
+  "positions": [
+    {
+      "id": "snipe-1770502729297-8mgh",
+      "side": "Short",
+      "entryPrice": 69434.09,
+      "entryTime": 1770502729297,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69470.89006769999,
+      "takeProfit": 69397.28993229999,
+      "minProfitTarget": 15,
+      "maxProfitTarget": 60,
+      "status": "open"
+    }
+  ],
   "lastReset": 1770502108000,
-  "tradesThisHour": 0,
+  "tradesThisHour": 1,
   "lastHourReset": 1770502108000,
   "note": "Reset Feb 7 2026 - all prior PnL was inflated (no fees). Now tracking NET after 0.08% round-trip fees."
 }
