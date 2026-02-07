@@ -1,9 +1,9 @@
 {
-  "balance": 1449.7117276254305,
+  "balance": 1899.6854502153788,
   "initialBalance": 2003,
   "dailyStartBalance": 2003,
-  "dailyPnl": -53.28827237456949,
-  "consecutiveLosses": 1,
+  "dailyPnl": -103.31454978462119,
+  "consecutiveLosses": 2,
   "positions": [
     {
       "id": "snipe-1770502729297-8mgh",
@@ -35,7 +35,13 @@
       "takeProfit": 69564.24952199998,
       "minProfitTarget": 15,
       "maxProfitTarget": 60,
-      "status": "open"
+      "status": "closed",
+      "exitPrice": 69490.27,
+      "exitTime": 1770502886492,
+      "pnl": -50.026277410051705,
+      "fees": 30,
+      "grossPnl": -20.026277410051705,
+      "reason": "stop-loss"
     }
   ],
   "lastReset": 1770502108000,
