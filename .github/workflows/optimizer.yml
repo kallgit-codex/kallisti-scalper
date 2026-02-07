@@ -2,7 +2,7 @@ name: Autonomous Optimizer + Bug Fixer
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # Every 2 hours
+    - cron: '0 0 30 2 *'  # DISABLED - only manual trigger  # Every 2 hours
   workflow_dispatch:  # Manual trigger
 
 jobs:
@@ -34,3 +34,4 @@ jobs:
           git add src/ data/optimization-report.json
           git diff --quiet && git diff --staged --quiet || git commit -m "🤖 Auto-optimization + bug fixes: $(date '+%Y-%m-%d %H:%M UTC')"
           git push
+
