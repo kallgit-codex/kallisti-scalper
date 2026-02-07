@@ -1,5 +1,5 @@
 {
-  "balance": 2187.3057381976932,
+  "balance": 1687.3057381976932,
   "initialBalance": 2003.25,
   "dailyStartBalance": 2003.25,
   "dailyPnl": 184.0557381976932,
@@ -72,9 +72,22 @@
       "exitTime": 1770497187984,
       "pnl": -25.175381119360495,
       "reason": "stop-loss"
+    },
+    {
+      "id": "snipe-1770497196525-l1px",
+      "side": "Long",
+      "entryPrice": 69615.9,
+      "entryTime": 1770497196526,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69579.003573,
+      "takeProfit": 69652.796427,
+      "minProfitTarget": 15,
+      "maxProfitTarget": 60,
+      "status": "open"
     }
   ],
   "lastReset": 1738922400000,
-  "tradesThisHour": 1,
+  "tradesThisHour": 2,
   "lastHourReset": 1770497069158
 }
