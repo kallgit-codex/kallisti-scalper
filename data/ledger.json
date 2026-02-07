@@ -1,8 +1,8 @@
 {
-  "balance": 1503.25,
+  "balance": 2119.892294897322,
   "initialBalance": 2003.25,
   "dailyStartBalance": 2003.25,
-  "dailyPnl": 0,
+  "dailyPnl": 116.64229489732188,
   "consecutiveLosses": 0,
   "positions": [
     {
@@ -16,7 +16,11 @@
       "takeProfit": 67832.95242059999,
       "minProfitTarget": 15,
       "maxProfitTarget": 60,
-      "status": "open"
+      "status": "closed",
+      "exitPrice": 68007.9,
+      "exitTime": 1770461937824,
+      "pnl": 116.64229489732188,
+      "reason": "take-profit"
     }
   ],
   "lastReset": 1738922400000,
