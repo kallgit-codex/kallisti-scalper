@@ -1,5 +1,5 @@
 // Kallisti's Reversal Scalper - Buy The Dip Strategy
-// LONGS ONLY: Catch reversals at local bottoms
+// NOW SUPPORTS BOTH LONGS AND SHORTS
 
 import { config } from "./config";
 import { log, error } from "./logger";
@@ -21,6 +21,9 @@ function normalizeCandles(rawKlines: any[]): Candle[] {
     volume: parseFloat(k[5]),
   }));
 }
+
+let lastSignalTime = 0;
+const MIN_SIGNAL_INTERVAL = 30000; // 30 seconds between signals
 
 async function main() {
   log("\n🔄 Kallisti's Reversal Scalper Running");
@@ -83,7 +86,14 @@ async function main() {
       return;
     }
     
-    // Look for reversal signal (LONGS ONLY)
+    // Prevent duplicate signals
+    const currentTime = Date.now();
+    if (currentTime - lastSignalTime < MIN_SIGNAL_INTERVAL) {
+      log(`⏳ Waiting for signal cooldown (${Math.round((MIN_SIGNAL_INTERVAL - (currentTime - lastSignalTime)) / 1000)}s)`);
+      return;
+    }
+    
+    // Look for reversal signal (BOTH LONGS AND SHORTS)
     const signal = detectReversal(candles);
     
     if (!signal.detected) {
@@ -93,17 +103,19 @@ async function main() {
     
     log(`🎯 REVERSAL DETECTED: ${signal.reason} (strength: ${(signal.strength! * 100).toFixed(0)}%)`);
     
-    // Create LONG position
+    // Create position based on signal side
     const position = createPosition(
-      "Long",  // ONLY LONGS!
+      signal.side!,  // Use signal side (Long or Short)
       currentPrice,
       config.risk.positionSizeDollars
     );
     
     await ledger.openPosition(position);
+    lastSignalTime = currentTime;
     
     const posSize = (position.collateral * position.leverage).toFixed(0);
-    log(`🚀 LONG $${posSize} (${position.leverage}x) @ $${position.entryPrice.toFixed(2)} | Target: +0.10% ($${(posSize * 0.001).toFixed(2)})`);
+    const sideEmoji = signal.side === 'Long' ? '🚀' : '🔻';
+    log(`${sideEmoji} ${signal.side?.toUpperCase()} $${posSize} (${position.leverage}x) @ $${position.entryPrice.toFixed(2)} | Target: +0.12% ($${(posSize * 0.0012).toFixed(2)})`);
     
   } catch (err) {
     error(`Error: ${err instanceof Error ? err.message : String(err)}`);

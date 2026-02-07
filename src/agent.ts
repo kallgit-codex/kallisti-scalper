@@ -23,7 +23,10 @@ function normalizeCandles(rawKlines: any[]): Candle[] {
 }
 
 let lastSignalTime = 0;
-const MIN_SIGNAL_INTERVAL = 30000; // 30 seconds between signals
+let lastSignalPrice = 0;
+let lastSignalSide: string | null = null;
+const MIN_SIGNAL_INTERVAL = 45000; // 45 seconds between signals
+const MIN_PRICE_CHANGE = 0.0005; // 0.05% price change required for new signal
 
 async function main() {
   log("\n🔄 Kallisti's Reversal Scalper Running");
@@ -86,8 +89,10 @@ async function main() {
       return;
     }
     
-    // Prevent duplicate signals
+    // Prevent duplicate signals - check time AND price AND side
     const currentTime = Date.now();
+    const priceChange = lastSignalPrice > 0 ? Math.abs(currentPrice - lastSignalPrice) / lastSignalPrice : 1;
+    
     if (currentTime - lastSignalTime < MIN_SIGNAL_INTERVAL) {
       log(`⏳ Waiting for signal cooldown (${Math.round((MIN_SIGNAL_INTERVAL - (currentTime - lastSignalTime)) / 1000)}s)`);
       return;
@@ -98,6 +103,12 @@ async function main() {
     
     if (!signal.detected) {
       log(`🔍 ${signal.reason}`);
+      return;
+    }
+    
+    // Additional duplicate check - same side and similar price
+    if (signal.side === lastSignalSide && priceChange < MIN_PRICE_CHANGE) {
+      log(`⚠️ Duplicate signal blocked (same side, price only ${(priceChange * 100).toFixed(3)}% different)`);
       return;
     }
     
@@ -112,10 +123,12 @@ async function main() {
     
     await ledger.openPosition(position);
     lastSignalTime = currentTime;
+    lastSignalPrice = currentPrice;
+    lastSignalSide = signal.side!;
     
     const posSize = (position.collateral * position.leverage).toFixed(0);
     const sideEmoji = signal.side === 'Long' ? '🚀' : '🔻';
-    log(`${sideEmoji} ${signal.side?.toUpperCase()} $${posSize} (${position.leverage}x) @ $${position.entryPrice.toFixed(2)} | Target: +0.12% ($${(posSize * 0.0012).toFixed(2)})`);
+    log(`${sideEmoji} ${signal.side?.toUpperCase()} $${posSize} (${position.leverage}x) @ $${position.entryPrice.toFixed(2)} | Target: +0.15% ($${(parseFloat(posSize) * 0.0015).toFixed(2)})`);
     
   } catch (err) {
     error(`Error: ${err instanceof Error ? err.message : String(err)}`);

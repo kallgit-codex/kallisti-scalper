@@ -17,7 +17,6 @@ export interface Position {
   exitTime?: number;
   pnl?: number;
   reason?: string;
-  trailingStop?: number;
 }
 
 export interface PositionUpdate {
@@ -99,29 +98,18 @@ export function updatePosition(
     return { shouldClose: true, reason: "min-profit", exitPrice: currentPrice };
   }
   
-  // 5. TRAILING STOP - Move stop to breakeven after 0.06% profit
-  if (pnlPercent >= 0.06 && !position.trailingStop) {
-    // Update trailing stop to breakeven (handled externally)
-    position.trailingStop = position.entryPrice;
+  // 5. BREAKEVEN EXIT - 2 min and not losing? Get out
+  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= -5) {
+    return { shouldClose: true, reason: "quick-exit-breakeven", exitPrice: currentPrice };
   }
   
-  // 6. QUICK EXIT - Only if actually profitable (not -$5 loss!)
-  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= 0.50) {
-    return { shouldClose: true, reason: "quick-exit-profit", exitPrice: currentPrice };
-  }
-  
-  // 7. EXTENDED TIMEOUT with small loss tolerance
+  // 6. TIMEOUT
   if (timeElapsed >= config.strategy.maxTradeSeconds) {
     return {
       shouldClose: true,
       reason: pnl >= 0 ? "timeout-profit" : "timeout-loss",
       exitPrice: currentPrice
     };
-  }
-  
-  // 8. STALE TRADE - If no movement after 2 minutes, exit at breakeven or small profit
-  if (timeElapsed >= 120 && Math.abs(pnlPercent) < 0.02) {
-    return { shouldClose: true, reason: "stale-exit", exitPrice: currentPrice };
   }
   
   return { shouldClose: false };

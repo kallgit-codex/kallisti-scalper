@@ -45,10 +45,10 @@ function isLocalExtreme(candles: Candle[], lookback: number = 5, type: 'bottom' 
   
   if (type === 'bottom') {
     const lowestOfRecent = Math.min(...recentCandles.map(c => c.low));
-    return currentCandle.low === lowestOfRecent;
+    return currentCandle.low <= lowestOfRecent * 1.001; // Allow 0.1% tolerance
   } else {
     const highestOfRecent = Math.max(...recentCandles.map(c => c.high));
-    return currentCandle.high === highestOfRecent;
+    return currentCandle.high >= highestOfRecent * 0.999; // Allow 0.1% tolerance
   }
 }
 
@@ -62,7 +62,7 @@ function isBearishCandle(candle: Candle): boolean {
 }
 
 // Check for volume spike
-function hasVolumeSpike(candles: Candle[], multiplier: number = 1.8): boolean {
+function hasVolumeSpike(candles: Candle[], multiplier: number = 1.5): boolean {
   if (candles.length < config.strategy.volumeLookback + 1) return false;
   
   const recent = candles.slice(-config.strategy.volumeLookback - 1, -1);
@@ -86,6 +86,23 @@ function getTrendDirection(candles: Candle[], period: number = 20): 'up' | 'down
   return 'sideways';
 }
 
+// Check momentum confirmation
+function hasMomentumConfirmation(candles: Candle[], side: 'Long' | 'Short'): boolean {
+  if (candles.length < 3) return false;
+  
+  const last3 = candles.slice(-3);
+  
+  if (side === 'Long') {
+    // For longs, we want to see price stabilizing or starting to rise
+    const priceChange = (last3[2].close - last3[0].close) / last3[0].close;
+    return priceChange > -0.002; // Not falling more than 0.2%
+  } else {
+    // For shorts, we want to see price stabilizing or starting to fall
+    const priceChange = (last3[2].close - last3[0].close) / last3[0].close;
+    return priceChange < 0.002; // Not rising more than 0.2%
+  }
+}
+
 // MAIN REVERSAL DETECTION - Now supports both longs and shorts
 export function detectReversal(candles: Candle[]): ReversalSignal {
   if (candles.length < 20) {
@@ -97,8 +114,8 @@ export function detectReversal(candles: Candle[]): ReversalSignal {
   const prevRsi = calculateRSI(candles.slice(0, -1));
   const trend = getTrendDirection(candles);
   
-  // LONG SIGNAL - RSI oversold and climbing
-  if (rsi <= 40 && rsi > prevRsi && isLocalExtreme(candles, 5, 'bottom')) {
+  // LONG SIGNAL - RSI oversold and climbing (more extreme threshold)
+  if (rsi <= 35 && rsi > prevRsi && isLocalExtreme(candles, 5, 'bottom')) {
     if (!isBullishCandle(currentCandle)) {
       return { detected: false, reason: 'Waiting for green candle for long' };
     }
@@ -107,7 +124,11 @@ export function detectReversal(candles: Candle[]): ReversalSignal {
       return { detected: false, reason: 'No volume spike for long' };
     }
     
-    const strength = Math.min(1, ((40 - rsi) / 15 + (rsi - prevRsi) / 5) / 2);
+    if (!hasMomentumConfirmation(candles, 'Long')) {
+      return { detected: false, reason: 'No momentum confirmation for long' };
+    }
+    
+    const strength = Math.min(1, ((35 - rsi) / 10 + (rsi - prevRsi) / 5) / 2);
     
     return {
       detected: true,
@@ -117,8 +138,11 @@ export function detectReversal(candles: Candle[]): ReversalSignal {
     };
   }
   
-  // SHORT SIGNAL - RSI overbought and falling
-  if (rsi >= 60 && rsi < prevRsi && isLocalExtreme(candles, 5, 'top')) {
+  // SHORT SIGNAL - RSI overbought and falling (aligned with current bullish market)
+  // In bullish market (RSI 59.4), be more selective with shorts
+  const shortRsiThreshold = trend === 'up' ? 68 : 65;
+  
+  if (rsi >= shortRsiThreshold && rsi < prevRsi && isLocalExtreme(candles, 5, 'top')) {
     if (!isBearishCandle(currentCandle)) {
       return { detected: false, reason: 'Waiting for red candle for short' };
     }
@@ -127,7 +151,11 @@ export function detectReversal(candles: Candle[]): ReversalSignal {
       return { detected: false, reason: 'No volume spike for short' };
     }
     
-    const strength = Math.min(1, ((rsi - 60) / 15 + (prevRsi - rsi) / 5) / 2);
+    if (!hasMomentumConfirmation(candles, 'Short')) {
+      return { detected: false, reason: 'No momentum confirmation for short' };
+    }
+    
+    const strength = Math.min(1, ((rsi - shortRsiThreshold) / 15 + (prevRsi - rsi) / 5) / 2);
     
     return {
       detected: true,
