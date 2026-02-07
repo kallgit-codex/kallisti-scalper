@@ -1,9 +1,9 @@
 {
-  "balance": 1687.3057381976932,
+  "balance": 2166.464594148711,
   "initialBalance": 2003.25,
   "dailyStartBalance": 2003.25,
-  "dailyPnl": 184.0557381976932,
-  "consecutiveLosses": 1,
+  "dailyPnl": 163.21459414871097,
+  "consecutiveLosses": 2,
   "positions": [
     {
       "id": "snipe-1770460951652-kral",
@@ -84,7 +84,11 @@
       "takeProfit": 69652.796427,
       "minProfitTarget": 15,
       "maxProfitTarget": 60,
-      "status": "open"
+      "status": "closed",
+      "exitPrice": 69577.21,
+      "exitTime": 1770497217938,
+      "pnl": -20.841144048982226,
+      "reason": "stop-loss"
     }
   ],
   "lastReset": 1738922400000,
