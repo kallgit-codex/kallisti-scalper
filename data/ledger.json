@@ -1,9 +1,9 @@
 {
   "balance": 2003.2489622316812,
   "initialBalance": 2000,
-  "dailyStartBalance": 2000,
-  "dailyPnl": 3.2489622316812365,
-  "consecutiveLosses": 7,
+  "dailyStartBalance": 2003.2489622316812,
+  "dailyPnl": 0,
+  "consecutiveLosses": 0,
   "positions": [
     {
       "id": "pos-1770343826136-jh2p",
@@ -1672,7 +1672,7 @@
       "reason": "quick-exit-breakeven"
     }
   ],
-  "lastReset": 1770343689243,
+  "lastReset": 1770430120842,
   "tradesThisHour": 3,
   "lastHourReset": 1770384749131,
   "pausedUntil": 1770388132910
