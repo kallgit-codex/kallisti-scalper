@@ -32,6 +32,7 @@ function normalizeCandles(rawKlines: any[]): Candle[] {
 }
 
 async function scan(client: BinanceClient, ledger: Ledger, ghSync: GitHubSync) {
+  console.log("[SCAN] entering scan " + new Date().toISOString());
   scanCount++;
   const scanId = "#" + scanCount;
   
@@ -193,7 +194,9 @@ async function main() {
   const loop = async () => {
     while (isRunning) {
       try {
+        console.log("[LOOP] scan start " + new Date().toISOString());
         await scan(client, ledger, ghSync);
+        console.log("[LOOP] scan done " + new Date().toISOString());
       } catch (loopErr) {
         error("LOOP ERROR: " + (loopErr instanceof Error ? loopErr.stack || loopErr.message : String(loopErr)));
       }
@@ -229,4 +232,3 @@ main().catch((err) => {
   error("Fatal: " + (err instanceof Error ? err.stack || err.message : String(err)));
   process.exit(1);
 });
-
