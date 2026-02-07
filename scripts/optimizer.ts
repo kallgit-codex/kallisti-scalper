@@ -376,14 +376,32 @@ Analyze the performance data, market context, and code to:
   const data: any = await response.json();
   const content = data.choices[0].message.content;
 
-  // Strip markdown code fences if present
+  // Robust JSON extraction - handles prose wrapping, markdown fences, etc.
   let cleaned = content.trim();
+  
+  // Strip markdown code fences if present
   if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
   if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
   if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
   cleaned = cleaned.trim();
 
-  return JSON.parse(cleaned);
+  // Try direct parse first
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {
+    // If direct parse fails, extract JSON object from anywhere in the response
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (innerErr: any) {
+        console.error('❌ Extracted JSON also failed to parse:', innerErr.message);
+        console.error('First 500 chars of response:', content.substring(0, 500));
+        throw new Error('Could not parse AI response as JSON. Raw start: ' + content.substring(0, 200));
+      }
+    }
+    throw new Error('No JSON object found in AI response. Raw start: ' + content.substring(0, 200));
+  }
 }
 
 function applyBugFixes(bugFixes: any[]): string[] {
@@ -564,3 +582,4 @@ main().catch(err => {
   console.error('❌ Error:', err.message);
   process.exit(1);
 });
+
