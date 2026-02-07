@@ -1,7 +1,8 @@
 export function log(message: string) {
-  process.stdout.write(`[${new Date().toISOString()}] ${message}\n`);
+  console.log("[" + new Date().toISOString() + "] " + message);
 }
 
 export function error(message: string) {
-  process.stderr.write(`[${new Date().toISOString()}] ERROR: ${message}\n`);
+  console.error("[" + new Date().toISOString() + "] ERROR: " + message);
 }
+
