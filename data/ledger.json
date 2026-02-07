@@ -1,5 +1,5 @@
 {
-  "balance": 2003.2489622316812,
+  "balance": 1978.2489622316812,
   "initialBalance": 2000,
   "dailyStartBalance": 2003.2489622316812,
   "dailyPnl": 0,
@@ -1670,10 +1670,23 @@
       "exitTime": 1770386932910,
       "pnl": -0.8817226247576232,
       "reason": "quick-exit-breakeven"
+    },
+    {
+      "id": "pos-1770458202609-b2c5",
+      "side": "Long",
+      "entryPrice": 68029.38,
+      "entryTime": 1770458202609,
+      "collateral": 25,
+      "leverage": 20,
+      "stopLoss": 67689.2331,
+      "takeProfit": 68267.48283000001,
+      "minProfitTarget": 3,
+      "maxProfitTarget": 100,
+      "status": "open"
     }
   ],
   "lastReset": 1770430120842,
-  "tradesThisHour": 3,
-  "lastHourReset": 1770384749131,
+  "tradesThisHour": 1,
+  "lastHourReset": 1770458202608,
   "pausedUntil": 1770388132910
 }
