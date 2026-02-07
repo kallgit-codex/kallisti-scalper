@@ -1,6 +1,7 @@
 // SNIPER MODE v2 - $500 × 75x = $37,500 position
 // 0.053% move = $20 profit = ~$36 BTC price change
 // That happens in SECONDS during momentum
+// FEES: 0.04% taker per side = 0.08% round trip = $30 on $37.5k
 
 export type TradingMode = "paper" | "live";
 
@@ -22,12 +23,18 @@ export const config = {
     maxPositions: 1,               // One shot at a time
   },
   
+  fees: {
+    takerFeePercent: 0.04,         // 0.04% per side (Binance taker)
+    makerFeePercent: 0.02,         // 0.02% per side (Binance maker - not used yet)
+    feeMode: "taker" as "taker" | "maker",  // Assume taker (market orders)
+  },
+  
   strategy: {
-    minProfitDollars: 15,          // Take $15+ 
-    maxProfitDollars: 60,          // Lock in $60 max
-    targetProfitPercent: 0.053,    // 0.053% = $20 on $37.5k
+    minProfitDollars: 15,          // NET $15+ after fees
+    maxProfitDollars: 60,          // NET $60 lock-in after fees
+    targetProfitPercent: 0.053,    // 0.053% = $20 on $37.5k (gross)
     
-    initialStopPercent: 0.053,     // Equal stop = 1:1 R:R
+    initialStopPercent: 0.053,     // Equal stop = 1:1 R:R (gross)
     recoveryStopPercent: 0.04,
     
     maxTradeSeconds: 180,          // 3 min max hold
@@ -59,3 +66,4 @@ export const config = {
   
   ledgerPath: "./data/ledger.json",
 };
+
