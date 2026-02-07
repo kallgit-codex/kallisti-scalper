@@ -99,9 +99,13 @@ export function updatePosition(
     return { shouldClose: true, reason: "min-profit", exitPrice: currentPrice };
   }
   
-  // 5. TRAILING STOP - Move stop to breakeven after 0.08% profit
-  if (pnlPercent >= 0.08 && !position.trailingStop) {
-    position.trailingStop = position.entryPrice;
+  // 5. TRAILING STOP - Move stop to breakeven after 0.06% profit (tighter for bearish market)
+  if (pnlPercent >= 0.06 && !position.trailingStop) {
+    // Set trailing stop slightly above entry to lock in small profit
+    const buffer = position.entryPrice * 0.0002; // 0.02% buffer
+    position.trailingStop = position.side === "Long" 
+      ? position.entryPrice + buffer 
+      : position.entryPrice - buffer;
   }
   
   // 5b. Check trailing stop hit (breakeven protection)
@@ -114,8 +118,8 @@ export function updatePosition(
     }
   }
   
-  // 6. QUICK EXIT - Only if actually profitable (minimum $0.30 profit to cover fees)
-  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= 0.30) {
+  // 6. QUICK EXIT - Only if actually profitable (minimum $0.50 profit to cover fees)
+  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= 0.50) {
     return { shouldClose: true, reason: "quick-exit-profit", exitPrice: currentPrice };
   }
   
@@ -129,9 +133,35 @@ export function updatePosition(
   }
   
   // 8. STALE TRADE - If no movement after 150 seconds, exit only if slightly profitable
-  if (timeElapsed >= 150 && pnlPercent >= 0.02 && pnlPercent < 0.05) {
+  if (timeElapsed >= 150 && pnlPercent >= 0.03 && pnlPercent < 0.06) {
     return { shouldClose: true, reason: "stale-exit-profit", exitPrice: currentPrice };
   }
   
   return { shouldClose: false };
+}
+
+export function closePosition(
+  position: Position,
+  exitPrice: number,
+  reason: string
+): Position {
+  const positionSize = position.collateral * position.leverage;
+  let pnlPercent: number;
+  
+  if (position.side === "Long") {
+    pnlPercent = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
+  } else {
+    pnlPercent = ((position.entryPrice - exitPrice) / position.entryPrice) * 100;
+  }
+  
+  const pnl = (pnlPercent / 100) * positionSize;
+  
+  return {
+    ...position,
+    status: "closed",
+    exitPrice,
+    exitTime: Date.now(),
+    pnl,
+    reason,
+  };
 }

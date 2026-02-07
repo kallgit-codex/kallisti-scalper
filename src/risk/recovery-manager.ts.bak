@@ -99,18 +99,27 @@ export function updatePosition(
     return { shouldClose: true, reason: "min-profit", exitPrice: currentPrice };
   }
   
-  // 5. TRAILING STOP - Move stop to breakeven after 0.06% profit
-  if (pnlPercent >= 0.06 && !position.trailingStop) {
-    // Update trailing stop to breakeven (handled externally)
+  // 5. TRAILING STOP - Move stop to breakeven after 0.08% profit
+  if (pnlPercent >= 0.08 && !position.trailingStop) {
     position.trailingStop = position.entryPrice;
   }
   
-  // 6. QUICK EXIT - Only if actually profitable (not -$5 loss!)
-  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= 0.50) {
+  // 5b. Check trailing stop hit (breakeven protection)
+  if (position.trailingStop) {
+    if (position.side === "Long" && currentPrice <= position.trailingStop) {
+      return { shouldClose: true, reason: "trailing-stop-breakeven", exitPrice: currentPrice };
+    }
+    if (position.side === "Short" && currentPrice >= position.trailingStop) {
+      return { shouldClose: true, reason: "trailing-stop-breakeven", exitPrice: currentPrice };
+    }
+  }
+  
+  // 6. QUICK EXIT - Only if actually profitable (minimum $0.30 profit to cover fees)
+  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= 0.30) {
     return { shouldClose: true, reason: "quick-exit-profit", exitPrice: currentPrice };
   }
   
-  // 7. EXTENDED TIMEOUT with small loss tolerance
+  // 7. EXTENDED TIMEOUT - Exit with small loss tolerance only after max time
   if (timeElapsed >= config.strategy.maxTradeSeconds) {
     return {
       shouldClose: true,
@@ -119,34 +128,10 @@ export function updatePosition(
     };
   }
   
-  // 8. STALE TRADE - If no movement after 2 minutes, exit at breakeven or small profit
-  if (timeElapsed >= 120 && Math.abs(pnlPercent) < 0.02) {
-    return { shouldClose: true, reason: "stale-exit", exitPrice: currentPrice };
+  // 8. STALE TRADE - If no movement after 150 seconds, exit only if slightly profitable
+  if (timeElapsed >= 150 && pnlPercent >= 0.02 && pnlPercent < 0.05) {
+    return { shouldClose: true, reason: "stale-exit-profit", exitPrice: currentPrice };
   }
   
   return { shouldClose: false };
-}
-
-export function closePosition(
-  position: Position,
-  exitPrice: number,
-  reason: string
-): Position & { exitPrice: number; exitTime: number; pnl: number; reason: string } {
-  const positionSize = position.collateral * position.leverage;
-  let pnlPercent: number;
-  if (position.side === "Long") {
-    pnlPercent = ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
-  } else {
-    pnlPercent = ((position.entryPrice - exitPrice) / position.entryPrice) * 100;
-  }
-  const pnl = (pnlPercent / 100) * positionSize;
-  
-  return {
-    ...position,
-    exitPrice,
-    exitTime: Date.now(),
-    pnl,
-    status: "closed" as const,
-    reason,
-  };
 }
