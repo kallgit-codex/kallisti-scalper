@@ -1,6 +1,4 @@
-// Kallisti's Reversal Scalper - Tuned for 30-min cron execution
-// Wider targets + stops to survive between runs
-
+// MOMENTUM RIDER CONFIG - High collateral, high leverage, grab $20, get out
 export type TradingMode = "paper" | "live";
 
 const env = process.env;
@@ -8,8 +6,8 @@ const env = process.env;
 export const config = {
   tradingMode: (env.TRADING_MODE as TradingMode) || "paper",
   symbol: env.TARGET_SYMBOL || "BTCUSDT",
-  candleInterval: "5m",        // CHANGED: 5m candles for 30-min execution
-  candleLimit: 50,
+  candleInterval: "1m",        // 1-minute candles - we need speed
+  candleLimit: 30,
   
   dataSource: {
     provider: "binance",
@@ -17,47 +15,47 @@ export const config = {
   },
   
   futures: {
-    leverage: Number(env.LEVERAGE || 20),
-    maxPositions: 2,
+    leverage: Number(env.LEVERAGE || 50),   // 50x leverage
+    maxPositions: 1,                         // ONE position at a time - focus
   },
   
   strategy: {
-    // WIDER targets for 30-min holds
-    minProfitDollars: 3,        // LOWERED: Take $3+ profits (was $8)
-    maxProfitDollars: 100,      // RAISED: Let winners run (was $70)
-    targetProfitPercent: 0.35,  // WIDER: 0.35% target (was 0.15%) 
+    // $20 TARGET - on $25,000 position (500 × 50x), 0.08% = $20
+    minProfitDollars: 15,       // Take $15+ if stalling
+    maxProfitDollars: 50,       // Let it run to $50 if momentum continues
+    targetProfitPercent: 0.10,  // 0.10% = $25 on $25k position
     
-    // WIDER stops - survive 30-min gaps
-    initialStopPercent: 0.50,   // WIDER: 0.50% stop (was 0.25%) 
-    recoveryStopPercent: 0.40,
+    // TIGHT STOP - lose $20 max, get out fast if wrong
+    initialStopPercent: 0.08,   // 0.08% = $20 loss on $25k
+    recoveryStopPercent: 0.08,
     
-    // LONGER time limits for 30-min cron
-    maxTradeSeconds: 3600,      // RAISED: 1 hour max (was 180s)
-    quickExitSeconds: 900,      // RAISED: 15 min quick exit (was 120s)
-    recoveryTimeSeconds: 600,
+    // FAST TIMEOUTS - this is seconds/minutes not hours
+    maxTradeSeconds: 120,       // 2 min max hold - if not working, bail
+    quickExitSeconds: 45,       // 45 sec - take profit if green
+    recoveryTimeSeconds: 60,
     
-    // Momentum on 5m candles
+    // Momentum detection params
     momentumCandles: 3,
-    momentumThreshold: 0.12,    // RAISED: 0.12% for 5m candles (was 0.08%)
+    momentumThreshold: 0.04,    // 0.04% move in 3 candles = go
     
-    // Volume
-    volumeMultiplier: 1.3,     // LOWERED: less restrictive (was 1.5)
-    volumeLookback: 20,
+    // Volume - not super strict, just needs to be alive
+    volumeMultiplier: 0.9,
+    volumeLookback: 10,
     
-    // Volatility
-    minVolatilityPercent: 0.15, // RAISED slightly for 5m
+    // Min volatility
+    minVolatilityPercent: 0.03,
   },
   
   risk: {
     initialBalance: 2000,
-    positionSizeDollars: 25,    // LOWERED: $25 per trade (was $30)
-    riskPerTrade: 25,
-    maxDailyLossPercent: 3,     // TIGHTER daily loss limit
-    maxDailyLossDollars: 60,    // TIGHTER (was $80)
-    maxConsecutiveLosses: 4,    // RAISED: Allow more attempts (was 3)
-    pauseAfterLossesMinutes: 60, // LONGER pause (was 30)
-    maxTradesPerHour: 8,        // LOWERED: quality over quantity
-    maxOpenRiskDollars: 75,
+    positionSizeDollars: 500,   // $500 collateral per trade
+    riskPerTrade: 500,
+    maxDailyLossPercent: 10,    // $200 max daily loss (10 bad trades)
+    maxDailyLossDollars: 200,
+    maxConsecutiveLosses: 3,    // 3 losses in a row = pause 30 min
+    pauseAfterLossesMinutes: 30,
+    maxTradesPerHour: 6,        // Max 6 trades/hour - be selective
+    maxOpenRiskDollars: 500,
   },
   
   ledgerPath: "./data/ledger.json",
