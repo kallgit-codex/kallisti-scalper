@@ -1,5 +1,5 @@
 {
-  "balance": 2072.4840221985005,
+  "balance": 1572.4840221985005,
   "initialBalance": 2000,
   "dailyStartBalance": 2000,
   "dailyPnl": 72.4840221985003,
@@ -42,9 +42,22 @@
       "fees": 30,
       "grossPnl": 36.48490030141401,
       "reason": "breakeven-exit"
+    },
+    {
+      "id": "snipe-1770506399376-vvtj",
+      "side": "Short",
+      "entryPrice": 68940.86,
+      "entryTime": 1770506399376,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69044.27129,
+      "takeProfit": 68768.50785000001,
+      "minProfitTarget": 35,
+      "maxProfitTarget": 100,
+      "status": "open"
     }
   ],
   "lastReset": 1770505478649,
-  "tradesThisHour": 2,
+  "tradesThisHour": 3,
   "lastHourReset": 1770505478649
 }
