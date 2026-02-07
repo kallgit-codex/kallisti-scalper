@@ -2,7 +2,7 @@ name: Reversal Scalper Bot
 
 on:
   schedule:
-    - cron: '* * * * *'  # Every 1 minute
+    - cron: '*/5 * * * *'  # Every 5 minutes - saves Actions minutes
   workflow_dispatch:  # Manual trigger
 
 jobs:
@@ -31,3 +31,4 @@ jobs:
           git add data/ledger.json
           git diff --quiet && git diff --staged --quiet || git commit -m "📊 Ledger update: $(date)"
           git push
+
