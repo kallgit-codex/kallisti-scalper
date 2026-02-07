@@ -1,4 +1,6 @@
-// NO RECOVERY MODE - Just tight stops and discipline
+// SNIPER POSITION MANAGER - Get in, get $20, get out
+// No complex recovery. No trailing stops. Just clean exits.
+
 import { config } from "../config";
 
 export interface Position {
@@ -33,17 +35,18 @@ export function createPosition(
 ): Position {
   const leverage = config.futures.leverage;
   const stopPercent = config.strategy.initialStopPercent / 100;
+  const targetPercent = config.strategy.targetProfitPercent / 100;
+  
   const stopLoss = side === "Long"
     ? entryPrice * (1 - stopPercent)
     : entryPrice * (1 + stopPercent);
   
-  const targetPercent = config.strategy.targetProfitPercent / 100;
   const takeProfit = side === "Long"
     ? entryPrice * (1 + targetPercent)
     : entryPrice * (1 - targetPercent);
   
   return {
-    id: `pos-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+    id: `snipe-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     side,
     entryPrice,
     entryTime: Date.now(),
@@ -73,7 +76,7 @@ export function updatePosition(
   }
   const pnl = (pnlPercent / 100) * positionSize;
   
-  // 1. STOP LOSS - Get out NOW
+  // 1. STOP LOSS - instant exit
   if (position.side === "Long" && currentPrice <= position.stopLoss) {
     return { shouldClose: true, reason: "stop-loss", exitPrice: currentPrice };
   }
@@ -81,60 +84,33 @@ export function updatePosition(
     return { shouldClose: true, reason: "stop-loss", exitPrice: currentPrice };
   }
   
-  // 2. MAX PROFIT - Lock it in
+  // 2. TAKE PROFIT - we hit our target, grab it
+  if (pnl >= position.minProfitTarget) {
+    return { shouldClose: true, reason: "take-profit", exitPrice: currentPrice };
+  }
+  
+  // 3. MAX PROFIT - don't be greedy
   if (pnl >= position.maxProfitTarget) {
     return { shouldClose: true, reason: "max-profit", exitPrice: currentPrice };
   }
   
-  // 3. TAKE PROFIT
-  if (position.side === "Long" && currentPrice >= position.takeProfit) {
-    return { shouldClose: true, reason: "take-profit", exitPrice: currentPrice };
-  }
-  if (position.side === "Short" && currentPrice <= position.takeProfit) {
-    return { shouldClose: true, reason: "take-profit", exitPrice: currentPrice };
+  // 4. QUICK PROFIT - after 30s, take anything above $10
+  if (timeElapsed >= 30 && pnl >= 10) {
+    return { shouldClose: true, reason: "quick-profit", exitPrice: currentPrice };
   }
   
-  // 4. MIN PROFIT
-  if (pnl >= position.minProfitTarget) {
-    return { shouldClose: true, reason: "min-profit", exitPrice: currentPrice };
+  // 5. BREAKEVEN EXIT - after 2 min, if we're slightly green, just take it
+  if (timeElapsed >= 120 && pnl >= 2) {
+    return { shouldClose: true, reason: "breakeven-exit", exitPrice: currentPrice };
   }
   
-  // 5. TRAILING STOP - Move stop to breakeven after 0.06% profit (tighter for bearish market)
-  if (pnlPercent >= 0.06 && !position.trailingStop) {
-    // Set trailing stop slightly above entry to lock in small profit
-    const buffer = position.entryPrice * 0.0002; // 0.02% buffer
-    position.trailingStop = position.side === "Long" 
-      ? position.entryPrice + buffer 
-      : position.entryPrice - buffer;
-  }
-  
-  // 5b. Check trailing stop hit (breakeven protection)
-  if (position.trailingStop) {
-    if (position.side === "Long" && currentPrice <= position.trailingStop) {
-      return { shouldClose: true, reason: "trailing-stop-breakeven", exitPrice: currentPrice };
-    }
-    if (position.side === "Short" && currentPrice >= position.trailingStop) {
-      return { shouldClose: true, reason: "trailing-stop-breakeven", exitPrice: currentPrice };
-    }
-  }
-  
-  // 6. QUICK EXIT - Only if actually profitable (minimum $0.50 profit to cover fees)
-  if (timeElapsed >= config.strategy.quickExitSeconds && pnl >= 0.50) {
-    return { shouldClose: true, reason: "quick-exit-profit", exitPrice: currentPrice };
-  }
-  
-  // 7. EXTENDED TIMEOUT - Exit with small loss tolerance only after max time
+  // 6. TIMEOUT - 5 min max, cut regardless
   if (timeElapsed >= config.strategy.maxTradeSeconds) {
     return {
       shouldClose: true,
       reason: pnl >= 0 ? "timeout-profit" : "timeout-loss",
       exitPrice: currentPrice
     };
-  }
-  
-  // 8. STALE TRADE - If no movement after 150 seconds, exit only if slightly profitable
-  if (timeElapsed >= 150 && pnlPercent >= 0.03 && pnlPercent < 0.06) {
-    return { shouldClose: true, reason: "stale-exit-profit", exitPrice: currentPrice };
   }
   
   return { shouldClose: false };
