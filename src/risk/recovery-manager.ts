@@ -1,8 +1,7 @@
-// SNIPER v2 EXITS - Fast in, fast out
-// $500 × 75x = $37,500 position
-// 0.053% = $20 gross. Fees = $30. Net = -$10.
-// Need 0.133%+ move ($50 gross) for $20 NET profit.
-// ALL thresholds are NET (after fees deducted)
+// SNIPER v3 - Fee-Aware Exit Logic
+// ALL thresholds are NET (after $30 round-trip fees deducted)
+// Target: 0.25% gross ($93.75) → $63.75 net
+// Stop: 0.15% gross (-$56.25) → -$86.25 net
 
 import { config } from "../config";
 
@@ -37,7 +36,6 @@ function calcFees(positionSize: number): number {
   const feeRate = config.fees.feeMode === "taker"
     ? config.fees.takerFeePercent
     : config.fees.makerFeePercent;
-  // Entry fee + Exit fee = 2 sides
   return positionSize * (feeRate / 100) * 2;
 }
 
@@ -88,7 +86,7 @@ export function updatePosition(
   const grossPnl = (grossPnlPct / 100) * posSize;
   const netPnl = grossPnl - fees;
   
-  // 1. STOP LOSS - instant (use gross, fees already lost)
+  // 1. STOP LOSS - hard stop, non-negotiable
   if (position.side === "Long" && currentPrice <= position.stopLoss) {
     return { shouldClose: true, reason: "stop-loss", exitPrice: currentPrice };
   }
@@ -96,27 +94,27 @@ export function updatePosition(
     return { shouldClose: true, reason: "stop-loss", exitPrice: currentPrice };
   }
   
-  // 2. HIT TARGET - NET $15+ after fees
-  if (netPnl >= position.minProfitTarget) {
-    return { shouldClose: true, reason: "take-profit", exitPrice: currentPrice };
-  }
-  
-  // 3. BIG WIN - NET $60+ after fees
+  // 2. MAX PROFIT - NET $100+ don't be greedy
   if (netPnl >= position.maxProfitTarget) {
     return { shouldClose: true, reason: "max-profit", exitPrice: currentPrice };
   }
   
-  // 4. QUICK GRAB - after 45s take NET $8+
-  if (elapsed >= config.strategy.quickExitSeconds && netPnl >= 8) {
+  // 3. HIT TARGET - NET $35+ after fees
+  if (netPnl >= position.minProfitTarget) {
+    return { shouldClose: true, reason: "take-profit", exitPrice: currentPrice };
+  }
+  
+  // 4. QUICK GRAB - after 45s take NET $15+
+  if (elapsed >= config.strategy.quickExitSeconds && netPnl >= config.strategy.quickGrabDollars) {
     return { shouldClose: true, reason: "quick-profit", exitPrice: currentPrice };
   }
   
-  // 5. BREAKEVEN - after 90s, exit if at least covering fees (net >= $0)
+  // 5. BREAKEVEN - after 90s, exit if covering fees (net >= $0)
   if (elapsed >= 90 && netPnl >= 0) {
     return { shouldClose: true, reason: "breakeven-exit", exitPrice: currentPrice };
   }
   
-  // 6. TIMEOUT - 3 min max, cut it
+  // 6. TIMEOUT - 3 min max
   if (elapsed >= config.strategy.maxTradeSeconds) {
     return {
       shouldClose: true,
@@ -152,4 +150,3 @@ export function closePosition(
     reason,
   };
 }
-
