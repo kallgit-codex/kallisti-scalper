@@ -85,10 +85,10 @@ export class Ledger {
     }
     
     // Check daily loss limit
-    if (Math.abs(this.state.dailyPnl) >= config.risk.maxDailyLossDollars) {
+    if (this.state.dailyPnl <= -config.risk.maxDailyLossDollars) {
       return {
         allowed: false,
-        reason: `Daily loss limit hit (-$${Math.abs(this.state.dailyPnl).toFixed(2)})`,
+        reason: `Daily loss limit hit ($${this.state.dailyPnl.toFixed(2)})`,
       };
     }
     
@@ -176,3 +176,4 @@ export class Ledger {
     };
   }
 }
+
