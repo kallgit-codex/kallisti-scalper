@@ -1,5 +1,5 @@
 {
-  "balance": 1943.384191724117,
+  "balance": 1443.384191724117,
   "initialBalance": 2000,
   "dailyStartBalance": 2000,
   "dailyPnl": -56.615808275883055,
@@ -61,9 +61,22 @@
       "fees": 30,
       "grossPnl": 2.3104504966246964,
       "reason": "underwater-cut"
+    },
+    {
+      "id": "snipe-1770523582669-2oj4",
+      "side": "Long",
+      "entryPrice": 69212.56,
+      "entryTime": 1770523582669,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69108.74116,
+      "takeProfit": 69385.59139999999,
+      "minProfitTarget": 25,
+      "maxProfitTarget": 100,
+      "status": "open"
     }
   ],
   "lastReset": 1770522541051,
-  "tradesThisHour": 3,
+  "tradesThisHour": 4,
   "lastHourReset": 1770522541051
 }
