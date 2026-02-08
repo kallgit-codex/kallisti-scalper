@@ -1,5 +1,5 @@
 {
-  "balance": 2021.6109257923627,
+  "balance": 1521.6109257923627,
   "initialBalance": 2000,
   "dailyStartBalance": 2008.247247864057,
   "dailyPnl": 13.36367792830545,
@@ -118,9 +118,22 @@
       "fees": 30,
       "grossPnl": 41.86374436925021,
       "reason": "breakeven-exit"
+    },
+    {
+      "id": "snipe-1770509965642-ryou",
+      "side": "Short",
+      "entryPrice": 69174.14,
+      "entryTime": 1770509965642,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69277.90121,
+      "takeProfit": 69001.20465,
+      "minProfitTarget": 35,
+      "maxProfitTarget": 100,
+      "status": "open"
     }
   ],
   "lastReset": 1770508816035,
-  "tradesThisHour": 2,
+  "tradesThisHour": 3,
   "lastHourReset": 1770509088260
 }
