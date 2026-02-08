@@ -1,6 +1,6 @@
-// SNIPER v3.1 - Momentum detection wired to config
-// v3.1: Now reads thresholds from config instead of hardcoding them
-// Entries were too loose — hardcoded 0.02% min move while config said 0.05%
+// SNIPER v3.2 - Momentum detection with regime overrides
+// v3.2: detectMomentum now accepts optional threshold/chase overrides
+//       from the research agent's market brief. Still pure code, no LLM.
 
 import { config } from "../config";
 
@@ -20,7 +20,13 @@ export interface MomentumSignal {
   side?: "Long" | "Short";
 }
 
-export function detectMomentum(candles: Candle[]): MomentumSignal {
+// v3.2: Added optional overrideThreshold and overrideChase params
+// When research agent provides regime-specific values, they override config defaults
+export function detectMomentum(
+  candles: Candle[],
+  overrideThreshold?: number,
+  overrideChase?: number
+): MomentumSignal {
   if (candles.length < 10) {
     return { detected: false, reason: "Not enough data" };
   }
@@ -29,7 +35,7 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
   const prev = candles[candles.length - 2];
   const prev2 = candles[candles.length - 3];
   
-  // === RULE 1: LAST 2 CANDLES SAME DIRECTION ===
+  // RULE 1: LAST 2 CANDLES SAME DIRECTION
   const currentMove = current.close - current.open;
   const prevMove = prev.close - prev.open;
   
@@ -45,7 +51,7 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
     };
   }
 
-  // === RULE 2: MEANINGFUL BODY SIZE ===
+  // RULE 2: MEANINGFUL BODY SIZE
   const currentBodyPct = Math.abs(currentMove) / current.open * 100;
   if (currentBodyPct < 0.01) {
     return {
@@ -54,11 +60,11 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
     };
   }
 
-  // === RULE 3: TOTAL 2-CANDLE MOVE IS REAL ===
-  // v3.1: Uses config.strategy.momentumThreshold (0.06%) instead of hardcoded 0.02%
+  // RULE 3: TOTAL 2-CANDLE MOVE IS REAL
+  // v3.2: Uses override from brief if provided, falls back to config
   const totalMove = Math.abs(current.close - prev.open);
   const movePct = (totalMove / prev.open) * 100;
-  const minMove = config.strategy.momentumThreshold;
+  const minMove = overrideThreshold ?? config.strategy.momentumThreshold;
   
   if (movePct < minMove) {
     const side = bothBullish ? "Long" : "Short";
@@ -68,9 +74,9 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
     };
   }
 
-  // === RULE 4: NOT CHASING ===
-  // v3.1: Uses config.strategy.maxChasePercent (0.30%) instead of hardcoded 0.35%
-  const maxChase = config.strategy.maxChasePercent;
+  // RULE 4: NOT CHASING
+  // v3.2: Uses override from brief if provided, falls back to config
+  const maxChase = overrideChase ?? config.strategy.maxChasePercent;
   const move5 = candles.length >= 5 
     ? Math.abs(current.close - candles[candles.length - 5].open) / candles[candles.length - 5].open * 100 
     : movePct;
@@ -83,8 +89,7 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
     };
   }
 
-  // === RULE 5: VOLUME NOT DEAD ===
-  // v3.1: Uses config.strategy.volumeMultiplier instead of hardcoded 0.5
+  // RULE 5: VOLUME NOT DEAD
   const volThreshold = config.strategy.volumeMultiplier;
   const lookback = config.strategy.volumeLookback;
   const avgVol = candles.slice(-lookback, -2).reduce((s, c) => s + c.volume, 0) / (lookback - 2);
@@ -99,11 +104,11 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
     };
   }
 
-  // === BONUS: 3rd candle confirmation ===
+  // BONUS: 3rd candle confirmation
   const prev2Move = prev2.close - prev2.open;
   const threeInRow = (bothBullish && prev2Move > 0) || (bothBearish && prev2Move < 0);
   
-  // === FIRE! ===
+  // FIRE!
   const side = bothBullish ? "Long" : "Short";
   const confidence = threeInRow ? "HIGH" : "MED";
   const strength = threeInRow ? 0.8 : 0.5;
