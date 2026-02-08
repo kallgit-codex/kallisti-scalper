@@ -1,33 +1,33 @@
 {
-  "timestamp": 1770526622845,
-  "generatedAt": "2026-02-08T04:57:02.845Z",
-  "price": 69313.99,
+  "timestamp": 1770527522624,
+  "generatedAt": "2026-02-08T05:12:02.624Z",
+  "price": 69338.49,
   "regime": "trending_bullish",
   "regimeConfidence": 0.9,
-  "regimeReason": "Price 0.17% above EMA20, high vol, 24h -1.9% | ⚠️ 4 risk events",
+  "regimeReason": "Price 0.19% above EMA20, high vol, 24h -2.2% | ⚠️ 4 risk events",
   "stats24h": {
-    "change": -1.927,
+    "change": -2.236,
     "high": 71191.88,
     "low": 67300,
-    "volume": 2771662602.150291,
-    "range": 5.614854952081108
+    "volume": 2762457606.973285,
+    "range": 5.612871004257526
   },
   "volatility": {
-    "atr_1h_pct": 0.8527085849488275,
-    "atr_15m_pct": 0.33639462652360635,
-    "bbWidth_1h": 2.793887409429908,
+    "atr_1h_pct": 0.7433127371174121,
+    "atr_15m_pct": 0.3239096681216994,
+    "bbWidth_1h": 2.5302452667088815,
     "level": "high"
   },
   "trend": {
     "direction": "bullish",
-    "priceVsEma20": 0.172928160478268,
-    "priceVsEma50": 1.3956881517923052,
+    "priceVsEma20": 0.1913963652886456,
+    "priceVsEma50": 1.5374024481305344,
     "ema20VsEma50": "golden"
   },
   "orderbook": {
-    "bidDepthUsd": 598727.3570329004,
-    "askDepthUsd": 352141.1879407,
-    "imbalance": 0.2593272964971689,
+    "bidDepthUsd": 1176189.0384476,
+    "askDepthUsd": 210814.57439179998,
+    "imbalance": 0.6960143831778036,
     "bias": "bid_heavy"
   },
   "news": {
@@ -35,23 +35,23 @@
     "catalystCount": 4,
     "riskEventCount": 4,
     "catalysts": [
-      "Macro: US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound L",
       "Market: BlackRock Bitcoin Fund (IBIT) Volume Explodes to $10B as Institutional Panic Hit",
       "ETF: Bitcoin nears pre-election floor as ETF flows stall, Citi says - CoinDesk",
-      "Market: BlackRock's bitcoin fund hits $10 billion volume record, hinting at peak selling"
+      "Market: BlackRock's bitcoin fund hits $10 billion volume record, hinting at peak selling",
+      "Macro: US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound L"
     ],
     "riskEvents": [
-      "US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound L",
-      "U.S. Manufacturing Data Turns Positive as Bitcoin Searches for a Bottom - Crypto",
       "Bitcoin (BTC) Price Drops Below $70,000 as ETF Outflows and Fed Concerns Mount -",
-      "Bitcoin nears pre-election floor as ETF flows stall, Citi says - CoinDesk"
+      "Bitcoin nears pre-election floor as ETF flows stall, Citi says - CoinDesk",
+      "U.S. Manufacturing Data Turns Positive as Bitcoin Searches for a Bottom - Crypto",
+      "US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound L"
     ],
     "topHeadlines": [
-      "US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound Lifts Investor Confidence - Analytics Insight",
       "Bitcoin tests $70,000 amid macro pressure and ETF outflows - ForkLog",
-      "Cryptocurrency Stocks To Follow Now - February 7th - MarketBeat",
       "BlackRock Bitcoin Fund (IBIT) Volume Explodes to $10B as Institutional Panic Hits Record Highs - TipRanks",
-      "U.S. Manufacturing Data Turns Positive as Bitcoin Searches for a Bottom - CryptoRank"
+      "Bitcoin (BTC) Price Drops Below $70,000 as ETF Outflows and Fed Concerns Mount - InsuranceNewsNet",
+      "Bitcoin nears pre-election floor as ETF flows stall, Citi says - CoinDesk",
+      "BlackRock's bitcoin fund hits $10 billion volume record, hinting at peak selling - CoinDesk"
     ]
   },
   "recommendations": {
@@ -77,23 +77,23 @@
     {
       "interval": "1m",
       "count": 10,
-      "bullish": 9,
-      "bearish": 1,
-      "avgBodyPct": 0.013352484646872548
+      "bullish": 5,
+      "bearish": 5,
+      "avgBodyPct": 0.027223802240278976
     },
     {
       "interval": "5m",
       "count": 10,
       "bullish": 6,
       "bearish": 4,
-      "avgBodyPct": 0.08147314223018291
+      "avgBodyPct": 0.0595223018648264
     },
     {
       "interval": "1h",
       "count": 10,
       "bullish": 3,
       "bearish": 7,
-      "avgBodyPct": 0.23578067944229053
+      "avgBodyPct": 0.2199345238686925
     }
   ]
 }
