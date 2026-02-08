@@ -1,9 +1,9 @@
 {
-  "balance": 1471.0737412274923,
+  "balance": 1943.384191724117,
   "initialBalance": 2000,
   "dailyStartBalance": 2000,
-  "dailyPnl": -28.92625877250775,
-  "consecutiveLosses": 1,
+  "dailyPnl": -56.615808275883055,
+  "consecutiveLosses": 2,
   "positions": [
     {
       "id": "snipe-1770522553625-ks5x",
@@ -54,7 +54,13 @@
       "takeProfit": 69315.2159,
       "minProfitTarget": 25,
       "maxProfitTarget": 100,
-      "status": "open"
+      "status": "closed",
+      "exitPrice": 69146.62,
+      "exitTime": 1770523431518,
+      "pnl": -27.689549503375304,
+      "fees": 30,
+      "grossPnl": 2.3104504966246964,
+      "reason": "underwater-cut"
     }
   ],
   "lastReset": 1770522541051,
