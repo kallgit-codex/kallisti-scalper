@@ -1,9 +1,9 @@
 {
-  "balance": 1375.6531926833595,
+  "balance": 1830.2701827230853,
   "initialBalance": 2000,
   "dailyStartBalance": 2008.247247864057,
-  "dailyPnl": -132.59405518069758,
-  "consecutiveLosses": 3,
+  "dailyPnl": -177.97706514097163,
+  "consecutiveLosses": 4,
   "positions": [
     {
       "id": "snipe-1770505552904-ka1i",
@@ -225,11 +225,17 @@
       "takeProfit": 69649.69,
       "minProfitTarget": 35,
       "maxProfitTarget": 100,
-      "status": "open"
+      "status": "closed",
+      "exitPrice": 69447.5,
+      "exitTime": 1770515676801,
+      "pnl": -45.38300996027405,
+      "fees": 30,
+      "grossPnl": -15.383009960274052,
+      "reason": "timeout-red"
     }
   ],
   "lastReset": 1770508816035,
   "tradesThisHour": 4,
   "lastHourReset": 1770512714829,
-  "pausedUntil": 1770515392634
+  "pausedUntil": 1770517476801
 }
