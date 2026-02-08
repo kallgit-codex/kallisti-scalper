@@ -1,5 +1,5 @@
 {
-  "balance": 1848.1387300946612,
+  "balance": 1348.1387300946612,
   "initialBalance": 2000,
   "dailyStartBalance": 2008.247247864057,
   "dailyPnl": -160.1085177693957,
@@ -251,10 +251,23 @@
       "fees": 30,
       "grossPnl": 47.868547371575936,
       "reason": "quick-profit"
+    },
+    {
+      "id": "snipe-1770517701062-uq0j",
+      "side": "Short",
+      "entryPrice": 69453.24,
+      "entryTime": 1770517701062,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69557.41986000001,
+      "takeProfit": 69279.60690000001,
+      "minProfitTarget": 35,
+      "maxProfitTarget": 100,
+      "status": "open"
     }
   ],
   "lastReset": 1770508816035,
-  "tradesThisHour": 1,
+  "tradesThisHour": 2,
   "lastHourReset": 1770517489013,
   "pausedUntil": 1770517476801
 }
