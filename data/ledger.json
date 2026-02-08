@@ -1,1 +1,25 @@
-{"balance":2000,"initialBalance":2000,"dailyStartBalance":2000,"dailyPnl":0,"consecutiveLosses":0,"positions":[],"lastReset":1770522541051,"tradesThisHour":0,"lastHourReset":1770522541051}
+{
+  "balance": 1500,
+  "initialBalance": 2000,
+  "dailyStartBalance": 2000,
+  "dailyPnl": 0,
+  "consecutiveLosses": 0,
+  "positions": [
+    {
+      "id": "snipe-1770522553625-ks5x",
+      "side": "Short",
+      "entryPrice": 69220.16,
+      "entryTime": 1770522553625,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69323.99024000001,
+      "takeProfit": 69047.10960000001,
+      "minProfitTarget": 25,
+      "maxProfitTarget": 100,
+      "status": "open"
+    }
+  ],
+  "lastReset": 1770522541051,
+  "tradesThisHour": 1,
+  "lastHourReset": 1770522541051
+}
