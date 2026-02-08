@@ -1,5 +1,5 @@
 {
-  "balance": 1830.2701827230853,
+  "balance": 1330.2701827230853,
   "initialBalance": 2000,
   "dailyStartBalance": 2008.247247864057,
   "dailyPnl": -177.97706514097163,
@@ -232,10 +232,23 @@
       "fees": 30,
       "grossPnl": -15.383009960274052,
       "reason": "timeout-red"
+    },
+    {
+      "id": "snipe-1770517609626-kl6i",
+      "side": "Short",
+      "entryPrice": 69542.01,
+      "entryTime": 1770517609626,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69646.323015,
+      "takeProfit": 69368.154975,
+      "minProfitTarget": 35,
+      "maxProfitTarget": 100,
+      "status": "open"
     }
   ],
   "lastReset": 1770508816035,
-  "tradesThisHour": 4,
-  "lastHourReset": 1770512714829,
+  "tradesThisHour": 1,
+  "lastHourReset": 1770517489013,
   "pausedUntil": 1770517476801
 }
