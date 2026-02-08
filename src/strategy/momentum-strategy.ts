@@ -1,5 +1,8 @@
-// SNIPER v2 - Even simpler. 2 candles same direction + not dead volume = GO
-// We only need BTC to move $36 more in our direction. That's nothing.
+// SNIPER v3.1 - Momentum detection wired to config
+// v3.1: Now reads thresholds from config instead of hardcoding them
+// Entries were too loose — hardcoded 0.02% min move while config said 0.05%
+
+import { config } from "../config";
 
 export interface Candle {
   time: number;
@@ -43,7 +46,6 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
   }
 
   // === RULE 2: MEANINGFUL BODY SIZE ===
-  // Current candle should have a real body, not a tiny doji
   const currentBodyPct = Math.abs(currentMove) / current.open * 100;
   if (currentBodyPct < 0.01) {
     return {
@@ -53,33 +55,39 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
   }
 
   // === RULE 3: TOTAL 2-CANDLE MOVE IS REAL ===
+  // v3.1: Uses config.strategy.momentumThreshold (0.06%) instead of hardcoded 0.02%
   const totalMove = Math.abs(current.close - prev.open);
   const movePct = (totalMove / prev.open) * 100;
+  const minMove = config.strategy.momentumThreshold;
   
-  if (movePct < 0.02) {
+  if (movePct < minMove) {
     const side = bothBullish ? "Long" : "Short";
     return {
       detected: false,
-      reason: `${side} but weak (${movePct.toFixed(3)}% < 0.02%) @ $${current.close.toFixed(2)}`
+      reason: `${side} but weak (${movePct.toFixed(3)}% < ${minMove}%) @ $${current.close.toFixed(2)}`
     };
   }
 
   // === RULE 4: NOT CHASING ===
-  // Check 5-candle move - if already ran 0.35%+, we're late
+  // v3.1: Uses config.strategy.maxChasePercent (0.30%) instead of hardcoded 0.35%
+  const maxChase = config.strategy.maxChasePercent;
   const move5 = candles.length >= 5 
     ? Math.abs(current.close - candles[candles.length - 5].open) / candles[candles.length - 5].open * 100 
     : movePct;
   
-  if (move5 > 0.35) {
+  if (move5 > maxChase) {
     const side = bothBullish ? "Long" : "Short";
     return {
       detected: false,
-      reason: `${side} but late (5m move ${move5.toFixed(3)}% > 0.35%) @ $${current.close.toFixed(2)}`
+      reason: `${side} but late (5m move ${move5.toFixed(3)}% > ${maxChase}%) @ $${current.close.toFixed(2)}`
     };
   }
 
   // === RULE 5: VOLUME NOT DEAD ===
-  const avgVol = candles.slice(-10, -2).reduce((s, c) => s + c.volume, 0) / 8;
+  // v3.1: Uses config.strategy.volumeMultiplier instead of hardcoded 0.5
+  const volThreshold = config.strategy.volumeMultiplier;
+  const lookback = config.strategy.volumeLookback;
+  const avgVol = candles.slice(-lookback, -2).reduce((s, c) => s + c.volume, 0) / (lookback - 2);
   const recentVol = (current.volume + prev.volume) / 2;
   const volRatio = avgVol > 0 ? recentVol / avgVol : 1;
   
@@ -107,5 +115,3 @@ export function detectMomentum(candles: Candle[]): MomentumSignal {
     strength,
   };
 }
-
-
