@@ -1,5 +1,5 @@
 {
-  "balance": 2029.527827139072,
+  "balance": 1529.527827139072,
   "initialBalance": 2000,
   "dailyStartBalance": 2008.247247864057,
   "dailyPnl": 21.28057927501493,
@@ -156,9 +156,22 @@
       "fees": 30,
       "grossPnl": 35.037923740341235,
       "reason": "breakeven-exit"
+    },
+    {
+      "id": "snipe-1770512986954-7b22",
+      "side": "Long",
+      "entryPrice": 69311.78,
+      "entryTime": 1770512986954,
+      "collateral": 500,
+      "leverage": 75,
+      "stopLoss": 69207.81233,
+      "takeProfit": 69485.05945,
+      "minProfitTarget": 35,
+      "maxProfitTarget": 100,
+      "status": "open"
     }
   ],
   "lastReset": 1770508816035,
-  "tradesThisHour": 4,
-  "lastHourReset": 1770509088260
+  "tradesThisHour": 1,
+  "lastHourReset": 1770512714829
 }
