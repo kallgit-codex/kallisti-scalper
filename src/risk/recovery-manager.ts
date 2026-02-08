@@ -1,4 +1,4 @@
-// SNIPER v3.1 - Fee-Aware Exit Logic with Underwater Cut
+// SNIPER v3.2 - Fee-Aware Exit Logic + Market Brief Integration
 // ALL thresholds are NET (after $30 round-trip fees deducted)
 // Target: 0.25% gross ($93.75) → $63.75 net
 // Stop: 0.15% gross (-$56.25) → -$86.25 net
@@ -76,9 +76,12 @@ export function createPosition(
   };
 }
 
+// v3.2: Added overrideMaxSeconds param from market brief
+// v3.2: Added overrideMaxSeconds from market brief for regime-specific timeout
 export function updatePosition(
   position: Position,
-  currentPrice: number
+  currentPrice: number,
+  overrideMaxSeconds?: number
 ): PositionUpdate {
   const now = Date.now();
   const elapsed = (now - position.entryTime) / 1000;
@@ -128,8 +131,9 @@ export function updatePosition(
     return { shouldClose: true, reason: "underwater-cut", exitPrice: currentPrice };
   }
   
-  // 7. TIMEOUT - 150s max (v3.1: was 180s)
-  if (elapsed >= config.strategy.maxTradeSeconds) {
+  // 7. TIMEOUT - uses brief override if available, else config (150s)
+  const maxSeconds = overrideMaxSeconds ?? config.strategy.maxTradeSeconds;
+  if (elapsed >= maxSeconds) {
     return {
       shouldClose: true,
       reason: netPnl >= 0 ? "timeout-green" : "timeout-red",
@@ -164,3 +168,4 @@ export function closePosition(
     reason,
   };
 }
+
