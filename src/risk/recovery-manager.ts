@@ -1,7 +1,12 @@
-// SNIPER v3 - Fee-Aware Exit Logic
+// SNIPER v3.1 - Fee-Aware Exit Logic with Underwater Cut
 // ALL thresholds are NET (after $30 round-trip fees deducted)
 // Target: 0.25% gross ($93.75) → $63.75 net
 // Stop: 0.15% gross (-$56.25) → -$86.25 net
+//
+// v3.1 CHANGES:
+//   - NEW: Underwater cut at 120s if losing > $10 net (avoids timeout-red bleeding)
+//   - Quick grab: 30s/$10 (was 45s/$15)
+//   - Max hold: 150s (was 180s)
 
 import { config } from "../config";
 
@@ -99,12 +104,12 @@ export function updatePosition(
     return { shouldClose: true, reason: "max-profit", exitPrice: currentPrice };
   }
   
-  // 3. HIT TARGET - NET $35+ after fees
+  // 3. HIT TARGET - NET $25+ after fees (v3.1: was $35)
   if (netPnl >= position.minProfitTarget) {
     return { shouldClose: true, reason: "take-profit", exitPrice: currentPrice };
   }
   
-  // 4. QUICK GRAB - after 45s take NET $15+
+  // 4. QUICK GRAB - after 30s take NET $10+ (v3.1: was 45s/$15)
   if (elapsed >= config.strategy.quickExitSeconds && netPnl >= config.strategy.quickGrabDollars) {
     return { shouldClose: true, reason: "quick-profit", exitPrice: currentPrice };
   }
@@ -114,7 +119,16 @@ export function updatePosition(
     return { shouldClose: true, reason: "breakeven-exit", exitPrice: currentPrice };
   }
   
-  // 6. TIMEOUT - 3 min max
+  // 6. UNDERWATER CUT - v3.1 NEW
+  // After 120s, if we're losing more than $10 net, cut it. Don't ride to timeout.
+  // This was the #1 fix needed — timeout-red exits were avg -$60 losses.
+  const underwaterCut = config.strategy.underwaterCutSeconds ?? 120;
+  const underwaterMin = config.strategy.underwaterMinLoss ?? -10;
+  if (elapsed >= underwaterCut && netPnl < underwaterMin) {
+    return { shouldClose: true, reason: "underwater-cut", exitPrice: currentPrice };
+  }
+  
+  // 7. TIMEOUT - 150s max (v3.1: was 180s)
   if (elapsed >= config.strategy.maxTradeSeconds) {
     return {
       shouldClose: true,
