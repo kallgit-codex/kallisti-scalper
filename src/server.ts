@@ -1,6 +1,6 @@
-// Railway Deployment - Continuous Trading Loop
-// Scans every 30 seconds instead of waiting for GitHub Actions cron
-// All P&L is NET after exchange fees
+// Railway Deployment - Continuous Trading Loop v3.2
+// NOW READS MARKET BRIEFS from research agent
+// Pure code — no LLM inference. Brief = JSON, logic = if/else.
 
 import { config } from "./config";
 import { log, error } from "./logger";
@@ -9,6 +9,7 @@ import { detectMomentum, Candle } from "./strategy/momentum-strategy";
 import { createPosition, updatePosition } from "./risk/recovery-manager";
 import { Ledger } from "./ledger";
 import { GitHubSync } from "./github-sync";
+import { getOverrides, getCurrentBrief, ScalperOverrides } from "./brief-reader";
 
 const SCAN_INTERVAL_MS = 30_000;
 const GITHUB_SYNC_INTERVAL_MS = 300_000;
@@ -19,6 +20,7 @@ const MIN_SIGNAL_INTERVAL = 30_000;
 let scanCount = 0;
 let lastGitHubSync = 0;
 let isRunning = true;
+let currentOverrides: ScalperOverrides | null = null;
 
 function normalizeCandles(rawKlines: any[]): Candle[] {
   return rawKlines.map((k: any) => ({
@@ -51,6 +53,11 @@ async function scan(client: BinanceClient, ledger: Ledger, ghSync: GitHubSync) {
       await ghSync.pushLedger();
     }
 
+    // ===== MARKET BRIEF INTEGRATION =====
+    // Fetch overrides from research agent (cached, refreshes every 5min)
+    const overrides = await getOverrides();
+    currentOverrides = overrides;
+
     const klines = await client.getKlines(
       config.symbol,
       config.candleInterval,
@@ -59,11 +66,12 @@ async function scan(client: BinanceClient, ledger: Ledger, ghSync: GitHubSync) {
     const candles = normalizeCandles(klines.list);
     const currentPrice = candles[candles.length - 1].close;
 
-    // Check open positions
+    // Check open positions (always — even if trading disabled, manage exits)
     const openBefore = [...ledger.openPositions];
     let positionClosed = false;
     for (const position of openBefore) {
-      const update = updatePosition(position, currentPrice);
+      // Pass override for maxTradeSeconds to tighten exits in certain regimes
+      const update = updatePosition(position, currentPrice, overrides.maxTradeSeconds);
       if (update.shouldClose) {
         const closed = await ledger.closePosition(
           position.id,
@@ -85,13 +93,21 @@ async function scan(client: BinanceClient, ledger: Ledger, ghSync: GitHubSync) {
       await ghSync.pushLedger();
     }
 
-    // Status every 10 scans or after close
+    // Status log every 10 scans
     if (scanCount % 10 === 0 || positionClosed) {
       const stats = ledger.stats;
-      log(scanId + " 💎 $" + ledger.state.balance.toFixed(2) + " | Day: $" + stats.dailyPnl + " (net) | " + stats.totalTrades + " trades (" + stats.winRate + "% W) | BTC: $" + currentPrice.toFixed(2));
+      const brief = getCurrentBrief();
+      const regimeTag = brief ? ` | 📊 ${brief.regime}` : "";
+      log(scanId + " 💎 $" + ledger.state.balance.toFixed(2) + " | Day: $" + stats.dailyPnl + " (net) | " + stats.totalTrades + " trades (" + stats.winRate + "% W) | BTC: $" + currentPrice.toFixed(2) + regimeTag);
     }
 
-    // Can we trade?
+    // ===== TRADING GATE — Research agent can pause us =====
+    if (!overrides.tradingEnabled) {
+      if (scanCount % 20 === 0) log(scanId + " 📊 " + overrides.reason);
+      return;
+    }
+
+    // Can we trade? (risk limits)
     const canOpen = ledger.canOpenPosition();
     if (!canOpen.allowed) {
       if (scanCount % 20 === 0) log(scanId + " 🛑 " + canOpen.reason);
@@ -103,10 +119,19 @@ async function scan(client: BinanceClient, ledger: Ledger, ghSync: GitHubSync) {
       return;
     }
 
-    // DETECT MOMENTUM
-    const signal = detectMomentum(candles);
+    // DETECT MOMENTUM — with regime overrides
+    const effectiveThreshold = overrides.momentumThreshold || config.strategy.momentumThreshold;
+    const effectiveChase = overrides.maxChasePercent || config.strategy.maxChasePercent;
+    const signal = detectMomentum(candles, effectiveThreshold, effectiveChase);
+    
     if (!signal.detected) {
       if (scanCount % 10 === 0) log(scanId + " 🔍 " + signal.reason);
+      return;
+    }
+
+    // ===== SIDE FILTER — Research agent can prefer a direction =====
+    if (overrides.preferredSide && signal.side !== overrides.preferredSide) {
+      if (scanCount % 10 === 0) log(scanId + " 📊 Skipping " + signal.side + " — regime prefers " + overrides.preferredSide);
       return;
     }
 
@@ -127,7 +152,9 @@ async function scan(client: BinanceClient, ledger: Ledger, ghSync: GitHubSync) {
     const sideEmoji = signal.side === "Long" ? "🟢" : "🔴";
     const posSize = (config.risk.positionSizeDollars * config.futures.leverage).toFixed(0);
     const targetDollars = (config.risk.positionSizeDollars * config.futures.leverage * config.strategy.targetProfitPercent / 100).toFixed(2);
-    log(sideEmoji + " " + signal.side + " $" + posSize + " @ $" + currentPrice.toFixed(2) + " | Target: +$" + targetDollars + " gross | Fees: $" + roundTripFee);
+    const brief = getCurrentBrief();
+    const regimeNote = brief ? ` [${brief.regime}]` : "";
+    log(sideEmoji + " " + signal.side + " $" + posSize + " @ $" + currentPrice.toFixed(2) + " | Target: +$" + targetDollars + " gross | Fees: $" + roundTripFee + regimeNote);
 
     await ghSync.pushLedger();
 
@@ -142,18 +169,22 @@ async function startHealthServer() {
     fetch(req) {
       const url = new URL(req.url);
       if (url.pathname === "/health") {
+        const brief = getCurrentBrief();
         return new Response(JSON.stringify({
           status: "running",
           scans: scanCount,
           uptime: process.uptime(),
           mode: config.tradingMode,
-          version: "v3-fee-aware",
-          feeRate: config.fees.takerFeePercent + "% per side",
+          version: "v3.2-brief-aware",
+          regime: brief?.regime || "unknown",
+          regimeConfidence: brief?.regimeConfidence || 0,
+          tradingEnabled: currentOverrides?.tradingEnabled ?? true,
+          overrideReason: currentOverrides?.reason || "",
         }), {
           headers: { "Content-Type": "application/json" },
         });
       }
-      return new Response("Kallisti Scalper v3 (fee-aware)", { status: 200 });
+      return new Response("Kallisti Scalper v3.2 (brief-aware)", { status: 200 });
     },
   });
   log("🌐 Health server on port " + HEALTH_PORT);
@@ -161,12 +192,13 @@ async function startHealthServer() {
 }
 
 async function main() {
-  log("🚀 MOMENTUM RIDER - Railway Continuous Mode");
+  log("🚀 MOMENTUM RIDER v3.2 - Brief-Aware");
   log("   Scan interval: " + (SCAN_INTERVAL_MS / 1000) + "s");
   log("   Mode: " + config.tradingMode);
   log("   Symbol: " + config.symbol);
   log("   Leverage: " + config.futures.leverage + "x");
-  log("   Fees: " + config.fees.takerFeePercent + "% taker per side (" + (config.fees.takerFeePercent * 2) + "% round trip)");
+  log("   Fees: " + config.fees.takerFeePercent + "% taker per side");
+  log("   📊 Reading market briefs from research agent");
   
   const posSize = config.risk.positionSizeDollars * config.futures.leverage;
   const rtFee = posSize * (config.fees.takerFeePercent / 100) * 2;
@@ -228,4 +260,3 @@ main().catch((err) => {
   error("Fatal: " + (err instanceof Error ? err.stack || err.message : String(err)));
   process.exit(1);
 });
-
