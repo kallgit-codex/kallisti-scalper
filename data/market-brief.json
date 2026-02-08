@@ -1,72 +1,72 @@
 {
-  "timestamp": 1770525722679,
-  "generatedAt": "2026-02-08T04:42:02.679Z",
-  "price": 69267.79,
-  "regime": "high_vol_chop",
-  "regimeConfidence": 0.7,
-  "regimeReason": "High ATR (0.85%) but no direction. 24h range: 5.6% | ⚠️ 3 risk events",
+  "timestamp": 1770526622845,
+  "generatedAt": "2026-02-08T04:57:02.845Z",
+  "price": 69313.99,
+  "regime": "trending_bullish",
+  "regimeConfidence": 0.9,
+  "regimeReason": "Price 0.17% above EMA20, high vol, 24h -1.9% | ⚠️ 4 risk events",
   "stats24h": {
-    "change": -2.138,
+    "change": -1.927,
     "high": 71191.88,
     "low": 67300,
-    "volume": 2786948144.2532625,
-    "range": 5.6185999293466775
+    "volume": 2771662602.150291,
+    "range": 5.614854952081108
   },
   "volatility": {
-    "atr_1h_pct": 0.853277444785564,
-    "atr_15m_pct": 0.35079074992864734,
-    "bbWidth_1h": 2.787484819511695,
+    "atr_1h_pct": 0.8527085849488275,
+    "atr_15m_pct": 0.33639462652360635,
+    "bbWidth_1h": 2.793887409429908,
     "level": "high"
   },
   "trend": {
-    "direction": "neutral",
-    "priceVsEma20": 0.11252712294710246,
-    "priceVsEma50": 1.3307908541434754,
+    "direction": "bullish",
+    "priceVsEma20": 0.172928160478268,
+    "priceVsEma50": 1.3956881517923052,
     "ema20VsEma50": "golden"
   },
   "orderbook": {
-    "bidDepthUsd": 922674.6684497995,
-    "askDepthUsd": 345723.99470619997,
-    "imbalance": 0.4548654066758826,
+    "bidDepthUsd": 598727.3570329004,
+    "askDepthUsd": 352141.1879407,
+    "imbalance": 0.2593272964971689,
     "bias": "bid_heavy"
   },
   "news": {
     "sentiment": "mixed",
-    "catalystCount": 1,
-    "riskEventCount": 3,
+    "catalystCount": 4,
+    "riskEventCount": 4,
     "catalysts": [
-      "Macro: US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound L"
+      "Macro: US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound L",
+      "Market: BlackRock Bitcoin Fund (IBIT) Volume Explodes to $10B as Institutional Panic Hit",
+      "ETF: Bitcoin nears pre-election floor as ETF flows stall, Citi says - CoinDesk",
+      "Market: BlackRock's bitcoin fund hits $10 billion volume record, hinting at peak selling"
     ],
     "riskEvents": [
       "US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound L",
-      "Bitcoin price news: BTC re-takes $70,000 as Michael Saylor addresses Quantum Com",
-      "U.S. Manufacturing Data Turns Positive as Bitcoin Searches for a Bottom - Crypto"
+      "U.S. Manufacturing Data Turns Positive as Bitcoin Searches for a Bottom - Crypto",
+      "Bitcoin (BTC) Price Drops Below $70,000 as ETF Outflows and Fed Concerns Mount -",
+      "Bitcoin nears pre-election floor as ETF flows stall, Citi says - CoinDesk"
     ],
     "topHeadlines": [
       "US Stock Market Today: S&P 500 and NASDAQ Rise After ISM Manufacturing Rebound Lifts Investor Confidence - Analytics Insight",
-      "Bitcoin price news: BTC re-takes $70,000 as Michael Saylor addresses Quantum Computing threat - CoinDesk",
+      "Bitcoin tests $70,000 amid macro pressure and ETF outflows - ForkLog",
       "Cryptocurrency Stocks To Follow Now - February 7th - MarketBeat",
-      "U.S. Manufacturing Data Turns Positive as Bitcoin Searches for a Bottom - CryptoRank",
-      "MARA moves US$87 million in Bitcoin during market downturn. - Bitget"
+      "BlackRock Bitcoin Fund (IBIT) Volume Explodes to $10B as Institutional Panic Hits Record Highs - TipRanks",
+      "U.S. Manufacturing Data Turns Positive as Bitcoin Searches for a Bottom - CryptoRank"
     ]
   },
   "recommendations": {
     "momentum_scalper": {
       "active": true,
-      "reason": "High vol chop — scalp both sides, quick exits",
+      "reason": "trending_bullish — momentum opportunities",
       "params": {
-        "bias": "neutral",
-        "aggression": "conservative",
-        "momentumThreshold": 0.08,
-        "maxTradeSeconds": 120
+        "bias": "long",
+        "aggression": "aggressive",
+        "momentumThreshold": 0.04
       }
     },
     "mean_reversion": {
-      "active": true,
-      "reason": "high_vol_chop — fade extremes back to mean",
-      "params": {
-        "aggression": "conservative"
-      }
+      "active": false,
+      "reason": "trending_bullish — don't fade a trend"
     },
     "funding_arb": {
       "active": false,
@@ -77,23 +77,23 @@
     {
       "interval": "1m",
       "count": 10,
-      "bullish": 4,
-      "bearish": 6,
-      "avgBodyPct": 0.028989828818944102
+      "bullish": 9,
+      "bearish": 1,
+      "avgBodyPct": 0.013352484646872548
     },
     {
       "interval": "5m",
       "count": 10,
       "bullish": 6,
       "bearish": 4,
-      "avgBodyPct": 0.09266803226004253
+      "avgBodyPct": 0.08147314223018291
     },
     {
       "interval": "1h",
       "count": 10,
       "bullish": 3,
       "bearish": 7,
-      "avgBodyPct": 0.22909326989091477
+      "avgBodyPct": 0.23578067944229053
     }
   ]
 }
