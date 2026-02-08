@@ -1,5 +1,6 @@
 // GitHub Sync - Persist ledger across Railway redeploys
 // Reads/writes data/ledger.json to GitHub repo
+// v3.1: Added 409 conflict retry (re-fetch SHA on conflict)
 
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { log, error } from "./logger";
@@ -23,6 +24,21 @@ export class GitHubSync {
       Accept: "application/vnd.github.v3+json",
       "Content-Type": "application/json",
     };
+  }
+
+  /** Fetch current SHA from GitHub */
+  private async fetchRemoteSha(): Promise<string> {
+    try {
+      const resp = await fetch(
+        `https://api.github.com/repos/${REPO}/contents/${LEDGER_PATH}?ref=${BRANCH}`,
+        { headers: this.headers }
+      );
+      if (resp.ok) {
+        const data: any = await resp.json();
+        return data.sha;
+      }
+    } catch {}
+    return "";
   }
 
   async pullLedger(): Promise<boolean> {
@@ -66,56 +82,59 @@ export class GitHubSync {
       return false;
     }
 
-    try {
-      const content = await readFile(LOCAL_LEDGER, "utf-8");
-      const encoded = btoa(content);
+    // Try up to 2 times (retry once on SHA conflict)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const content = await readFile(LOCAL_LEDGER, "utf-8");
+        const encoded = btoa(content);
 
-      // Get current SHA if we don't have it
-      if (!this.sha) {
-        try {
-          const resp = await fetch(
-            `https://api.github.com/repos/${REPO}/contents/${LEDGER_PATH}?ref=${BRANCH}`,
-            { headers: this.headers }
-          );
-          if (resp.ok) {
-            const data: any = await resp.json();
-            this.sha = data.sha;
-          }
-        } catch {}
-      }
-
-      const body: any = {
-        message: `📊 ledger sync ${new Date().toISOString().slice(0, 19)}`,
-        content: encoded,
-        branch: BRANCH,
-      };
-
-      if (this.sha) {
-        body.sha = this.sha;
-      }
-
-      const resp = await fetch(
-        `https://api.github.com/repos/${REPO}/contents/${LEDGER_PATH}`,
-        {
-          method: "PUT",
-          headers: this.headers,
-          body: JSON.stringify(body),
+        // Get current SHA if we don't have it
+        if (!this.sha) {
+          this.sha = await this.fetchRemoteSha();
         }
-      );
 
-      if (!resp.ok) {
-        const errText = await resp.text();
-        error(`GitHub push failed (${resp.status}): ${errText}`);
+        const body: any = {
+          message: `📊 ledger sync ${new Date().toISOString().slice(0, 19)}`,
+          content: encoded,
+          branch: BRANCH,
+        };
+
+        if (this.sha) {
+          body.sha = this.sha;
+        }
+
+        const resp = await fetch(
+          `https://api.github.com/repos/${REPO}/contents/${LEDGER_PATH}`,
+          {
+            method: "PUT",
+            headers: this.headers,
+            body: JSON.stringify(body),
+          }
+        );
+
+        if (resp.status === 409 && attempt === 0) {
+          // SHA conflict — re-fetch and retry
+          log("⚠️  SHA conflict on push, re-fetching SHA and retrying...");
+          this.sha = await this.fetchRemoteSha();
+          continue;
+        }
+
+        if (!resp.ok) {
+          const errText = await resp.text();
+          error(`GitHub push failed (${resp.status}): ${errText}`);
+          return false;
+        }
+
+        const result: any = await resp.json();
+        this.sha = result.content.sha;
+        log(`📤 Ledger synced to GitHub (sha: ${this.sha.slice(0, 7)})`);
+        return true;
+      } catch (err) {
+        error(`GitHub push error: ${err instanceof Error ? err.message : String(err)}`);
         return false;
       }
-
-      const result: any = await resp.json();
-      this.sha = result.content.sha;
-      log(`📤 Ledger synced to GitHub (sha: ${this.sha.slice(0, 7)})`);
-      return true;
-    } catch (err) {
-      error(`GitHub push error: ${err instanceof Error ? err.message : String(err)}`);
-      return false;
     }
+
+    return false;
   }
 }
